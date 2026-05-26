@@ -17,7 +17,7 @@ const ALLOWED_EMAILS = [
 
 // ─── PLAID CLIENT ───────────────────────────────────────────────────────────
 const plaidConfig = new Configuration({
-  basePath: PlaidEnvironments[process.env.PLAID_ENV || 'sandbox'],
+  basePath: PlaidEnvironments[process.env.PLAID_ENV || 'production'],
   baseOptions: {
     headers: {
       'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
