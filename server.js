@@ -40,8 +40,10 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'bb-finance-secret-change-me',
   resave: false,
   saveUninitialized: false,
+  proxy: true, // This tells the app to trust the Render proxy
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Required for HTTPS (Render provides this)
+    httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   }
 }));
