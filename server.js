@@ -1,23 +1,23 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { PlaidApi, Configuration, PlaidEnvironments, Products, CountryCode } = require('plaid');
+const { PlaidApi, PlaidEnvironments, Configuration, Products, CountryCode } = require('plaid');
 const path = require('path');
 
 const app = express();
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── ALLOWED USERS (only these 3 emails can log in) ───────────────────────
-const ALLOWED_EMAILS = [
-  'blutz.518@gmail.com',
-  'bgirma144k@gmail.com',
-  'protectingfamilies1st@gmail.com'
-];
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'bb-finance-secret-2025',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 }
+}));
 
-// ─── PLAID CLIENT ───────────────────────────────────────────────────────────
+// ── Plaid client ──────────────────────────────────────────────────────────────
 const plaidConfig = new Configuration({
-  basePath: PlaidEnvironments[process.env.PLAID_ENV || 'production'],
+  basePath: PlaidEnvironments[process.env.PLAID_ENV || 'sandbox'],
   baseOptions: {
     headers: {
       'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
@@ -27,267 +27,409 @@ const plaidConfig = new Configuration({
 });
 const plaidClient = new PlaidApi(plaidConfig);
 
-// ─── IN-MEMORY TOKEN STORE (use a DB in production) ─────────────────────────
-// Maps userId -> { accessToken, itemId }
-const userTokens = {};
+// ── In-memory token store (replace with DB for production) ────────────────────
+// Structure: { accessToken, itemId, institutionName, accounts: [...] }
+let linkedItems = [];
 
-// ─── MIDDLEWARE ──────────────────────────────────────────────────────────────
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
-app.set('trust proxy', 1); // Trust first proxy
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'bb-finance-secret-change-me',
-  resave: false,
-  saveUninitialized: false,
-  proxy: true, // This tells the app to trust the Render proxy
-  cookie: {
-    secure: true, // Required for HTTPS (Render provides this)
-    httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+// ─────────────────────────────────────────────────────────────────────────────
+// INCOME TRANSACTION CLASSIFIER
+//
+// Any credit (money-in) to the ···2429 account that matches one of these
+// patterns is treated as income. Amount from Plaid is negative for credits
+// on depository accounts, so we check amount < 0 (money flowing IN).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const INCOME_PAYMENT_TYPES = ['ach', 'eft'];
+
+// Plaid transaction_type for credits into a depository account
+const INCOME_TRANSACTION_TYPES = ['special', 'place']; // Plaid uses these for payroll/ACH
+
+// Keywords in name/merchant that flag a transaction as income
+const INCOME_KEYWORDS = [
+  'payroll', 'direct dep', 'direct deposit', 'ach deposit', 'ach credit',
+  'eft deposit', 'eft credit', 'eft payment', 'commission', 'salary',
+  'wages', 'bonus', 'reimbursement', 'transfer in', 'zelle', 'venmo',
+  'cashapp', 'wire transfer', 'wire deposit',
+];
+
+// Plaid personal_finance_category primary values that map to income
+const INCOME_PFC_CATEGORIES = [
+  'INCOME', 'TRANSFER_IN',
+];
+
+function classifyIncomeTransaction(txn) {
+  // Plaid depository: negative amount = money coming IN to the account
+  const isCredit = txn.amount < 0;
+  if (!isCredit) return null; // outflow — not income
+
+  const name = (txn.name || '').toLowerCase();
+  const merchant = (txn.merchant_name || '').toLowerCase();
+  const paymentChannel = (txn.payment_channel || '').toLowerCase();
+  const paymentMeta = txn.payment_meta || {};
+  const pfcPrimary = txn.personal_finance_category?.primary || '';
+  const pfcDetailed = txn.personal_finance_category?.detailed || '';
+
+  // 1. Plaid personal finance category says income or transfer-in
+  if (INCOME_PFC_CATEGORIES.some(c => pfcPrimary.toUpperCase().includes(c))) {
+    return labelIncomeType(name, pfcDetailed, paymentMeta);
   }
-}));
 
-app.use(passport.initialize());
-app.use(passport.session());
-
-// ─── PASSPORT GOOGLE STRATEGY ────────────────────────────────────────────────
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/auth/google/callback',
-}, (accessToken, refreshToken, profile, done) => {
-  const email = profile.emails?.[0]?.value?.toLowerCase();
-
-  if (!ALLOWED_EMAILS.includes(email)) {
-    return done(null, false, { message: 'Access denied. This app is private.' });
+  // 2. Payment meta has ACH or EFT indicators
+  const ppd = (paymentMeta.ppd_id || '').toLowerCase();
+  const payeeRef = (paymentMeta.payee || '').toLowerCase();
+  if (paymentMeta.payment_method) {
+    const method = paymentMeta.payment_method.toLowerCase();
+    if (INCOME_PAYMENT_TYPES.some(t => method.includes(t))) {
+      return labelIncomeType(name, pfcDetailed, paymentMeta);
+    }
   }
 
-  const user = {
-    id: profile.id,
-    email,
-    name: profile.displayName,
-    firstName: profile.name?.givenName,
-    photo: profile.photos?.[0]?.value,
-  };
+  // 3. Name/merchant keyword match
+  const combined = `${name} ${merchant} ${payeeRef}`;
+  if (INCOME_KEYWORDS.some(k => combined.includes(k))) {
+    return labelIncomeType(name, pfcDetailed, paymentMeta);
+  }
 
-  return done(null, user);
-}));
-
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((user, done) => done(null, user));
-
-// ─── AUTH MIDDLEWARE ──────────────────────────────────────────────────────────
-function requireAuth(req, res, next) {
-  if (req.isAuthenticated()) return next();
-  res.redirect('/');
+  return null; // not classified as income
 }
 
-// ─── ROUTES ───────────────────────────────────────────────────────────────────
+function labelIncomeType(name, pfcDetailed, paymentMeta) {
+  const n = name.toLowerCase();
+  const d = pfcDetailed.toLowerCase();
 
-// Login page
-app.get('/', (req, res) => {
-  if (req.isAuthenticated()) return res.redirect('/dashboard');
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
+  if (n.includes('commission')) return 'Commission';
+  if (n.includes('bonus'))      return 'Bonus';
+  if (n.includes('zelle') || n.includes('venmo') || n.includes('cashapp')) return 'Transfer In';
+  if (n.includes('wire'))       return 'Wire Transfer';
+  if (n.includes('payroll') || d.includes('payroll') || d.includes('wages')) return 'Payroll';
+  if (n.includes('eft'))        return 'EFT Deposit';
+  if (n.includes('ach'))        return 'ACH Deposit';
+  if (n.includes('direct dep')) return 'Direct Deposit';
+  return 'Income Deposit';
+}
 
-// Google OAuth
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+// ─────────────────────────────────────────────────────────────────────────────
+// ACCOUNT ROUTING LOGIC
+//
+// Income source  → "Adv Plus Banking ···2429"  (subtype: checking, last4: 2429)
+// BoA credit data→ "Customized Cash Rewards Visa Signature ···0784" (last4: 0784)
+// ─────────────────────────────────────────────────────────────────────────────
 
-app.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/?error=access_denied' }),
-  (req, res) => res.redirect('/dashboard')
-);
+function identifyAccount(account) {
+  const name = (account.name || '').toLowerCase();
+  const official = (account.official_name || '').toLowerCase();
+  const last4 = account.mask || '';
+  const subtype = (account.subtype || '').toLowerCase();
 
-app.get('/auth/logout', (req, res) => {
-  req.logout(() => res.redirect('/'));
-});
+  if (last4 === '2429' || name.includes('adv plus') || name.includes('advantage plus') || official.includes('adv plus')) {
+    return { role: 'income', label: 'Adv Plus Banking ···2429' };
+  }
+  if (last4 === '0784' || name.includes('customized cash') || official.includes('customized cash rewards')) {
+    return { role: 'boa_credit', label: 'Bank of America · Customized Cash Rewards ···0784' };
+  }
+  if (subtype === 'credit card') {
+    return { role: 'credit_card', label: account.official_name || account.name };
+  }
+  if (subtype === 'checking' || subtype === 'savings') {
+    return { role: 'bank', label: account.official_name || account.name };
+  }
+  return { role: 'other', label: account.official_name || account.name };
+}
 
-// Dashboard page (protected)
-app.get('/dashboard', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-
-// ─── API: Current user ────────────────────────────────────────────────────────
-app.get('/api/me', requireAuth, (req, res) => {
-  res.json({
-    name: req.user.name,
-    firstName: req.user.firstName,
-    email: req.user.email,
-    photo: req.user.photo,
-  });
-});
-
-// ─── PLAID: Create Link Token ─────────────────────────────────────────────────
-app.post('/api/plaid/create-link-token', requireAuth, async (req, res) => {
+// ── Create Plaid Link token ───────────────────────────────────────────────────
+app.post('/api/plaid/create-link-token', async (req, res) => {
   try {
     const response = await plaidClient.linkTokenCreate({
-      user: { client_user_id: req.user.id },
+      user: { client_user_id: 'bb-user-001' },
       client_name: 'B&B Finance',
-      products: [Products.Transactions],
+      products: [Products.Transactions, Products.Liabilities],
       country_codes: [CountryCode.Us],
       language: 'en',
     });
     res.json({ link_token: response.data.link_token });
   } catch (err) {
-    console.error('Plaid link token error:', err.response?.data || err.message);
+    console.error('create-link-token error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to create link token' });
   }
 });
 
-// ─── PLAID: Exchange Public Token ─────────────────────────────────────────────
-app.post('/api/plaid/exchange-token', requireAuth, async (req, res) => {
+// ── Exchange public token ─────────────────────────────────────────────────────
+app.post('/api/plaid/exchange-token', async (req, res) => {
+  const { public_token } = req.body;
   try {
-    const { public_token, institution_name } = req.body;
-    const response = await plaidClient.itemPublicTokenExchange({ public_token });
-    const { access_token, item_id } = response.data;
+    const tokenRes = await plaidClient.itemPublicTokenExchange({ public_token });
+    const accessToken = tokenRes.data.access_token;
+    const itemId = tokenRes.data.item_id;
 
-    if (!userTokens[req.user.id]) userTokens[req.user.id] = [];
-    userTokens[req.user.id].push({ access_token, item_id, institution_name });
+    // Fetch accounts immediately so we can tag them
+    const accountsRes = await plaidClient.accountsGet({ access_token: accessToken });
+    const accounts = accountsRes.data.accounts.map(a => ({
+      account_id: a.account_id,
+      name: a.name,
+      official_name: a.official_name,
+      mask: a.mask,
+      type: a.type,
+      subtype: a.subtype,
+      balances: a.balances,
+      identity: identifyAccount(a),
+    }));
 
-    res.json({ success: true, institution: institution_name });
+    // Try to get institution name
+    let institutionName = 'Unknown Bank';
+    try {
+      const itemRes = await plaidClient.itemGet({ access_token: accessToken });
+      const instId = itemRes.data.item.institution_id;
+      if (instId) {
+        const instRes = await plaidClient.institutionsGetById({ institution_id: instId, country_codes: [CountryCode.Us] });
+        institutionName = instRes.data.institution.name;
+      }
+    } catch (_) {}
+
+    // Remove existing item for same institution (re-link)
+    linkedItems = linkedItems.filter(i => i.itemId !== itemId);
+    linkedItems.push({ accessToken, itemId, institutionName, accounts });
+
+    res.json({ success: true, accounts: accounts.map(a => ({ name: a.name, mask: a.mask, role: a.identity.role })) });
   } catch (err) {
-    console.error('Token exchange error:', err.response?.data || err.message);
+    console.error('exchange-token error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to exchange token' });
   }
 });
 
-// ─── PLAID: Get All Accounts ──────────────────────────────────────────────────
-app.get('/api/plaid/accounts', requireAuth, async (req, res) => {
-  try {
-    const tokens = userTokens[req.user.id] || [];
-    if (tokens.length === 0) return res.json({ accounts: [] });
+// ── Get all financial data ────────────────────────────────────────────────────
+app.get('/api/data', async (req, res) => {
+  if (linkedItems.length === 0) {
+    return res.json({ linked: false, accounts: [], creditCards: [], income: null, summary: null });
+  }
 
+  try {
     const allAccounts = [];
-    for (const { access_token, institution_name } of tokens) {
-      const response = await plaidClient.accountsGet({ access_token });
-      const accounts = response.data.accounts.map(a => ({
-        ...a,
-        institution: institution_name
-      }));
-      allAccounts.push(...accounts);
+    const creditCards = [];
+    let incomeAccount = null;
+    let boaCreditAccount = null;
+
+    // Refresh balances for all linked items
+    for (const item of linkedItems) {
+      try {
+        const accountsRes = await plaidClient.accountsGet({ access_token: item.accessToken });
+
+        for (const a of accountsRes.data.accounts) {
+          const identity = identifyAccount(a);
+          const enriched = {
+            account_id: a.account_id,
+            name: a.name,
+            official_name: a.official_name,
+            mask: a.mask,
+            type: a.type,
+            subtype: a.subtype,
+            balances: a.balances,
+            institution: item.institutionName,
+            identity,
+          };
+          allAccounts.push(enriched);
+
+          if (identity.role === 'income') {
+            incomeAccount = enriched;
+          } else if (identity.role === 'boa_credit') {
+            boaCreditAccount = enriched;
+          } else if (identity.role === 'credit_card') {
+            creditCards.push(enriched);
+          }
+        }
+      } catch (itemErr) {
+        console.warn(`Error fetching item ${item.itemId}:`, itemErr.message);
+      }
     }
 
-    res.json({ accounts: allAccounts });
-  } catch (err) {
-    console.error('Accounts error:', err.response?.data || err.message);
-    res.status(500).json({ error: 'Failed to fetch accounts' });
-  }
-});
-
-// ─── PLAID: Get Transactions ──────────────────────────────────────────────────
-app.get('/api/plaid/transactions', requireAuth, async (req, res) => {
-  try {
-    const tokens = userTokens[req.user.id] || [];
-    if (tokens.length === 0) return res.json({ transactions: [] });
-
-    const endDate = new Date().toISOString().split('T')[0];
-    const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    const allTransactions = [];
-    for (const { access_token } of tokens) {
-      const response = await plaidClient.transactionsGet({
-        access_token,
-        start_date: startDate,
-        end_date: endDate,
-      });
-      allTransactions.push(...response.data.transactions);
+    // Try to get liabilities for credit card statement info
+    const liabilitiesMap = {}; // account_id -> liability details
+    for (const item of linkedItems) {
+      try {
+        const liabRes = await plaidClient.liabilitiesGet({ access_token: item.accessToken });
+        const creditLiabilities = liabRes.data.liabilities.credit || [];
+        for (const cl of creditLiabilities) {
+          liabilitiesMap[cl.account_id] = {
+            last_statement_balance: cl.last_statement_balance,
+            minimum_payment_amount: cl.minimum_payment_amount,
+            next_payment_due_date: cl.next_payment_due_date,
+            last_payment_date: cl.last_payment_date,
+            last_payment_amount: cl.last_payment_amount,
+            is_overdue: cl.is_overdue,
+          };
+        }
+      } catch (_) {
+        // liabilities product may not be enabled for all items
+      }
     }
 
-    // Sort newest first
-    allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-    res.json({ transactions: allTransactions.slice(0, 50) });
-  } catch (err) {
-    console.error('Transactions error:', err.response?.data || err.message);
-    res.status(500).json({ error: 'Failed to fetch transactions' });
-  }
-});
+    // Build credit card objects with liability data merged
+    const buildCreditCard = (account) => {
+      const liability = liabilitiesMap[account.account_id] || {};
+      return {
+        account_id: account.account_id,
+        name: account.name,
+        official_name: account.official_name,
+        mask: account.mask,
+        institution: account.institution,
+        label: account.identity.label,
+        current_balance: account.balances.current,
+        available_credit: account.balances.available,
+        credit_limit: account.balances.limit,
+        last_statement_balance: liability.last_statement_balance ?? null,
+        minimum_payment: liability.minimum_payment_amount ?? null,
+        due_date: liability.next_payment_due_date ?? null,
+        last_payment_date: liability.last_payment_date ?? null,
+        last_payment_amount: liability.last_payment_amount ?? null,
+        is_overdue: liability.is_overdue ?? false,
+      };
+    };
 
-// ─── PLAID: Get Balances ──────────────────────────────────────────────────────
-app.get('/api/plaid/balances', requireAuth, async (req, res) => {
-  try {
-    const tokens = userTokens[req.user.id] || [];
-    if (tokens.length === 0) return res.json({ accounts: [] });
+    // BoA credit card (specifically mapped)
+    const creditCardsList = [];
+    if (boaCreditAccount) {
+      creditCardsList.push(buildCreditCard(boaCreditAccount));
+    }
+    for (const cc of creditCards) {
+      creditCardsList.push(buildCreditCard(cc));
+    }
 
-    const allBalances = [];
-    for (const { access_token, institution_name } of tokens) {
-      const response = await plaidClient.accountsBalanceGet({ access_token });
-      const accounts = response.data.accounts.map(a => ({
+    // Income summary + transactions from the ···2429 account
+    let incomeData = null;
+    if (incomeAccount) {
+      const incomeTransactions = await fetchIncomeTransactions(incomeAccount.account_id);
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+      const thisMonthTxns = incomeTransactions.filter(t => t.date.startsWith(thisMonth));
+      const prevMonthTxns = incomeTransactions.filter(t => t.date.startsWith(prevMonth));
+      const sumAmounts = (txns) => txns.reduce((s, t) => s + Math.abs(t.amount), 0);
+      incomeData = {
+        label: incomeAccount.identity.label,
+        institution: incomeAccount.institution,
+        available_balance: incomeAccount.balances.available,
+        current_balance: incomeAccount.balances.current,
+        account_type: `${incomeAccount.type} / ${incomeAccount.subtype}`,
+        this_month_total: sumAmounts(thisMonthTxns),
+        prev_month_total: sumAmounts(prevMonthTxns),
+        this_month_transactions: thisMonthTxns,
+        recent_transactions: incomeTransactions.slice(0, 30),
+      };
+    }
+
+    // Total card debt
+    const totalDebt = creditCardsList.reduce((sum, c) => sum + (c.current_balance || 0), 0);
+
+    res.json({
+      linked: true,
+      accounts: allAccounts.map(a => ({
         name: a.name,
-        type: a.type,
-        subtype: a.subtype,
-        balance: a.balances.current,
-        available: a.balances.available,
-        limit: a.balances.limit,
-        institution: institution_name,
         mask: a.mask,
-      }));
-      allBalances.push(...accounts);
-    }
-
-    res.json({ accounts: allBalances });
+        institution: a.institution,
+        role: a.identity.role,
+        label: a.identity.label,
+        balances: a.balances,
+      })),
+      creditCards: creditCardsList,
+      income: incomeData,
+      totalDebt,
+    });
   } catch (err) {
-    console.error('Balances error:', err.response?.data || err.message);
-    res.status(500).json({ error: 'Failed to fetch balances' });
+    console.error('data fetch error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to fetch account data' });
   }
 });
 
-// ─── STATIC BUDGET DATA (from your sheet) ─────────────────────────────────────
-app.get('/api/budget/static', requireAuth, (req, res) => {
-  res.json({
-    monthlyExpenses: [
-      { category: 'Rent', amount: 1600, dueDate: '1st', type: 'Bank (BoA)' },
-      { category: 'Truck', amount: 554, dueDate: '3rd', type: 'Bank (BoA)' },
-      { category: 'Utilities', amount: 75, dueDate: '10th', type: 'Bank (BoA)' },
-      { category: 'Student Loan', amount: 242, dueDate: '17th', type: 'Bank (BoA)' },
-      { category: 'Tesla', amount: 618, dueDate: '24th', type: 'Bank (BoA)' },
-      { category: 'T-Mobile', amount: 155, dueDate: '25th', type: 'Bank (BoA)' },
-      { category: 'aidVantage', amount: 124.72, dueDate: '28th', type: 'Bank (BoA)' },
-      { category: 'Car Wash (Brad)', amount: 20, dueDate: '19th', type: 'Credit Card (RH)' },
-      { category: 'Lemonade Insurance', amount: 26.91, dueDate: '12th', type: 'Credit Card (RH)' },
-      { category: 'Car Wash (Beza)', amount: 20, dueDate: '21st', type: 'Credit Card' },
-      { category: 'Internet', amount: 50.26, dueDate: '25th', type: 'Credit Card (RH)' },
-      { category: 'Ringy', amount: 109, dueDate: '26th', type: 'Credit Card (GSA)' },
-      { category: 'iPhone', amount: 41.62, dueDate: '30th', type: 'Credit Card (GSA)' },
-      { category: 'Apple Watch', amount: 35.75, dueDate: '30th', type: 'Credit Card (GSA)' },
-      { category: 'F45', amount: 169, dueDate: 'Monthly', type: 'Credit Card (RH)' },
-      { category: 'Lashes', amount: 100, dueDate: 'Random', type: 'Credit Card (RH)' },
-      { category: 'TxTag', amount: 40, dueDate: 'Random', type: 'Credit Card (RH)' },
-      { category: 'Tithe/Offering', amount: 1400, dueDate: 'Monthly', type: 'Withdraw' },
-    ],
-    yearlyExpenses: [
-      { category: 'AMEX Gold', amount: 325, dueDate: '5/23' },
-      { category: 'AMEX Platinum', amount: 895, dueDate: '7/16' },
-      { category: 'AMEX Platinum 2', amount: 195, dueDate: '7/16' },
-      { category: 'E&O Insurance', amount: 432, dueDate: '8/1' },
-      { category: 'AMEX Blue', amount: 95, dueDate: '8/7' },
-      { category: 'Venture', amount: 95, dueDate: '8/10' },
-      { category: 'Zoom', amount: 156, dueDate: '8/30' },
-      { category: 'Calendly', amount: 112, dueDate: '8/30' },
-      { category: 'AMEX Delta', amount: 175, dueDate: '11/15' },
-    ],
-    income: [
-      { source: 'Brad - GM', amount: 8000, type: 'Bank (BoA)' },
-      { source: 'Beza - Insurance', amount: 2833.59, type: 'Bank (BoA)' },
-    ],
-    cards: [
-      { name: 'Apple Card', balance: 86.85, dueDate: '5/30/2026', nextStatement: 77.37, thisMonth: 77.37, remainder: 9.48, useCase: 'Chargepoint (3%) + random (tap 2%), iPhone, Apple Watch' },
-      { name: 'Bank of America', balance: 124.36, dueDate: '6/5/2026', nextStatement: 124.36, thisMonth: 0, remainder: 0, useCase: '3% online shopping, Tesla Sub' },
-      { name: 'AMEX Platinum', balance: 5611.80, dueDate: '6/10/2026', nextStatement: 3879.84, thisMonth: 0, remainder: 1731.96, useCase: 'Airfare, hotels, rentals, HULU, Walmart, Peacock' },
-      { name: 'AMEX Gold', balance: 505.34, dueDate: '6/17/2026', nextStatement: 505.34, thisMonth: 0, remainder: 0, useCase: 'Eating out (4%), carwash, Dunkin' },
-      { name: 'AMEX Blue', balance: 914.95, dueDate: '6/1/2026', nextStatement: 387.60, thisMonth: 0, remainder: 527.35, useCase: 'Grocery (6%) & gas (4%)' },
-      { name: 'RobinHood', balance: 5666.83, dueDate: '6/17/2026', nextStatement: 5666.83, thisMonth: 0, remainder: 0, useCase: 'Random (3% back all), Tesla Insurance, Ringy, etc.' },
-      { name: 'Amazon', balance: 745.53, dueDate: '6/10/2026', nextStatement: 724.96, thisMonth: 0, remainder: 20.57, useCase: 'All Amazon (5% cashback)' },
-      { name: 'Venmo', balance: 58.62, dueDate: '6/7/2026', nextStatement: 58.62, thisMonth: 0, remainder: 0, useCase: '1-3% on highest categories' },
-    ]
-  });
+
+// ── Fetch & classify income transactions for a given account_id ──────────────
+async function fetchIncomeTransactions(targetAccountId) {
+  const results = [];
+  const endDate = new Date().toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  for (const item of linkedItems) {
+    try {
+      const allTxns = [];
+      try {
+        let cursor = null;
+        let hasMore = true;
+        while (hasMore) {
+          const syncRes = await plaidClient.transactionsSync({
+            access_token: item.accessToken,
+            cursor: cursor || undefined,
+            count: 500,
+          });
+          allTxns.push(...syncRes.data.added, ...syncRes.data.modified);
+          cursor = syncRes.data.next_cursor;
+          hasMore = syncRes.data.has_more;
+          if (allTxns.length > 2000) break;
+        }
+      } catch (_) {
+        const getRes = await plaidClient.transactionsGet({
+          access_token: item.accessToken,
+          start_date: startDate,
+          end_date: endDate,
+          options: { account_ids: [targetAccountId], count: 500, offset: 0 },
+        });
+        allTxns.push(...getRes.data.transactions);
+      }
+
+      for (const txn of allTxns) {
+        if (txn.account_id !== targetAccountId) continue;
+        if (txn.date < startDate || txn.date > endDate) continue;
+        const incomeType = classifyIncomeTransaction(txn);
+        if (!incomeType) continue;
+        results.push({
+          id: txn.transaction_id,
+          date: txn.date,
+          name: txn.name,
+          merchant: txn.merchant_name || null,
+          amount: Math.abs(txn.amount),
+          income_type: incomeType,
+          category: txn.personal_finance_category?.primary || (txn.category || [])[0] || 'Income',
+          pending: txn.pending,
+        });
+      }
+    } catch (err) {
+      console.warn('fetchIncomeTransactions error:', err.message);
+    }
+  }
+  results.sort((a, b) => b.date.localeCompare(a.date));
+  return results;
+}
+
+// ── Dedicated income transactions endpoint ────────────────────────────────────
+app.get('/api/income-transactions', async (req, res) => {
+  if (linkedItems.length === 0) return res.json({ linked: false, transactions: [], totals: {}, byType: {} });
+  try {
+    let incomeAccountId = null;
+    for (const item of linkedItems) {
+      for (const a of item.accounts) {
+        if (a.identity.role === 'income') { incomeAccountId = a.account_id; break; }
+      }
+      if (incomeAccountId) break;
+    }
+    if (!incomeAccountId) return res.json({ linked: true, transactions: [], totals: {}, byType: {}, message: 'Income account not linked yet' });
+
+    const transactions = await fetchIncomeTransactions(incomeAccountId);
+    const totals = {};
+    const byType = {};
+    for (const t of transactions) {
+      const month = t.date.slice(0, 7);
+      totals[month] = (totals[month] || 0) + t.amount;
+      byType[t.income_type] = (byType[t.income_type] || 0) + t.amount;
+    }
+    res.json({ linked: true, transactions, totals, byType });
+  } catch (err) {
+    console.error('/api/income-transactions error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch income transactions' });
+  }
 });
 
-// ─── START SERVER ─────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`\n🏦 B&B Finance running at http://localhost:${PORT}`);
-  console.log(`📋 Allowed users: ${ALLOWED_EMAILS.join(', ')}\n`);
+// ── Serve dashboard ───────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`B&B Finance running on port ${PORT}`));
