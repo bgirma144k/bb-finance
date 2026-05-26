@@ -35,7 +35,7 @@ const userTokens = {};
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-
+app.set('trust proxy', 1); // Trust first proxy
 app.use(session({
   secret: process.env.SESSION_SECRET || 'bb-finance-secret-change-me',
   resave: false,
