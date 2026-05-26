@@ -1,642 +1,328 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>B&B Finance — Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --navy:       #f7f5f2;
-      --navy-mid:   #ffffff;
-      --navy-card:  #ffffff;
-      --navy-hover: #f0ece4;
-      --border:     rgba(160, 130, 60, 0.15);
-      --border-hover: rgba(160, 130, 60, 0.35);
-      --gold:       #a07830;
-      --gold-light: #c9a84c;
-      --gold-dim:   rgba(201, 168, 76, 0.1);
-      --cream:      #1a1510;
-      --cream-dim:  rgba(26, 21, 16, 0.65);
-      --cream-faint:rgba(26, 21, 16, 0.38);
-      --green:      #16a34a;
-      --red:        #dc2626;
-      --blue:       #2563eb;
-      --sidebar-w:  240px;
-    }
-
-    html { font-size: 14px; }
-
-    body {
-      background: var(--navy);
-      color: var(--cream);
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 400;
-      min-height: 100vh;
-      display: flex;
-      overflow-x: hidden;
-    }
-
-    /* ══ SIDEBAR ══ */
-    .sidebar {
-      width: var(--sidebar-w);
-      min-height: 100vh;
-      background: var(--navy-mid);
-      border-right: 1px solid var(--border);
-      box-shadow: 2px 0 12px rgba(0,0,0,0.06);
-      display: flex;
-      flex-direction: column;
-      position: fixed;
-      top: 0; left: 0; bottom: 0;
-      z-index: 100;
-      transition: transform 0.3s ease;
-    }
-
-    .sidebar-logo {
-      padding: 28px 24px 24px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo-badge {
-      width: 40px; height: 40px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, var(--gold), var(--gold-light));
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 16px; font-weight: 600;
-      color: #fff;
-      flex-shrink: 0;
-      box-shadow: 0 4px 12px rgba(160,120,48,0.3);
-    }
-
-    .logo-info { display: flex; flex-direction: column; }
-    .logo-info .name {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 18px; font-weight: 600; color: var(--cream);
-      letter-spacing: 0.3px;
-    }
-    .logo-info .tag {
-      font-size: 10px; color: var(--gold); letter-spacing: 2px;
-      text-transform: uppercase; margin-top: 1px;
-    }
-
-    .sidebar-nav {
-      flex: 1;
-      padding: 20px 12px;
-      display: flex; flex-direction: column; gap: 2px;
-    }
-
-    .nav-section-label {
-      font-size: 9px; color: var(--cream-faint);
-      letter-spacing: 2.5px; text-transform: uppercase;
-      padding: 8px 12px 4px;
-      margin-top: 8px;
-    }
-
-    .nav-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 12px;
-      border-radius: 8px;
-      color: var(--cream-dim);
-      cursor: pointer;
-      transition: all 0.18s ease;
-      font-size: 13px; font-weight: 400;
-      border: 1px solid transparent;
-    }
-
-    .nav-item:hover {
-      background: var(--gold-dim);
-      color: var(--cream);
-      border-color: var(--border);
-    }
-
-    .nav-item.active {
-      background: var(--gold-dim);
-      color: var(--gold-light);
-      border-color: var(--border-hover);
-      font-weight: 500;
-    }
-
-    .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
-
-    .sidebar-user {
-      padding: 16px 16px 20px;
-      border-top: 1px solid var(--border);
-      display: flex; align-items: center; gap: 10px;
-    }
-
-    .user-avatar {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      background: var(--navy-card);
-      border: 1.5px solid var(--border);
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-
-    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .user-avatar .initials {
-      width: 100%; height: 100%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 600; color: var(--gold);
-    }
-
-    .user-details { flex: 1; min-width: 0; }
-    .user-name { font-size: 12px; font-weight: 500; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .user-email { font-size: 10px; color: var(--cream-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    .logout-btn {
-      width: 28px; height: 28px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--cream-faint);
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.18s;
-      flex-shrink: 0;
-    }
-    .logout-btn:hover { background: rgba(248,113,113,0.1); color: var(--red); border-color: rgba(248,113,113,0.3); }
-
-    /* ══ MAIN ══ */
-    .main {
-      margin-left: var(--sidebar-w);
-      flex: 1;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .topbar {
-      height: 64px;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 32px;
-      background: var(--navy-mid);
-      position: sticky; top: 0; z-index: 50;
-    }
-
-    .topbar-left { display: flex; flex-direction: column; }
-    .topbar-greeting {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 20px; font-style: italic; font-weight: 300;
-      color: var(--cream);
-    }
-    .topbar-date { font-size: 11px; color: var(--cream-faint); margin-top: 1px; }
-
-    .topbar-right { display: flex; align-items: center; gap: 12px; }
-
-    .plaid-btn {
-      display: flex; align-items: center; gap: 8px;
-      padding: 9px 18px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-      color: var(--navy);
-      font-size: 12px; font-weight: 600;
-      cursor: pointer; border: none;
-      transition: all 0.2s ease;
-      letter-spacing: 0.3px;
-    }
-    .plaid-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,168,76,0.3); }
-    .plaid-btn svg { width: 13px; height: 13px; }
-
-    .refresh-btn {
-      width: 36px; height: 36px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--cream-dim);
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.18s;
-    }
-    .refresh-btn:hover { background: var(--gold-dim); color: var(--gold-light); }
-    .refresh-btn svg { width: 14px; height: 14px; }
-    .refresh-btn.spinning svg { animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .content {
-      padding: 28px 32px 48px;
-      flex: 1;
-    }
-
-    .view { display: none; }
-    .view.active { display: block; }
-
-    .section-hdr {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 18px;
-    }
-    .section-title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 22px; font-weight: 400;
-      color: var(--cream);
-      letter-spacing: 0.3px;
-    }
-    .section-title span { color: var(--gold); font-style: italic; }
-
-    /* ── STAT CARDS ── */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-
-    .stat-card {
-      background: var(--navy-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px 22px;
-      transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
-      animation: cardIn 0.6s ease both;
-      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-    }
-    .stat-card:hover { border-color: var(--border-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-
-    @keyframes cardIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .stat-card:nth-child(1) { animation-delay: 0.05s; }
-    .stat-card:nth-child(2) { animation-delay: 0.1s; }
-    .stat-card:nth-child(3) { animation-delay: 0.15s; }
-    .stat-card:nth-child(4) { animation-delay: 0.2s; }
-
-    .stat-label {
-      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-      color: var(--cream-faint); margin-bottom: 10px;
-    }
-
-    .stat-value {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 28px; font-weight: 400;
-      color: var(--cream); line-height: 1;
-    }
-
-    .stat-value.green { color: var(--green); }
-    .stat-value.red   { color: var(--red); }
-    .stat-value.gold  { color: var(--gold-light); }
-
-    .stat-meta {
-      font-size: 11px; color: var(--cream-faint);
-      margin-top: 8px; display: flex; align-items: center; gap: 6px;
-    }
-
-    .badge {
-      display: inline-flex; align-items: center;
-      padding: 2px 7px; border-radius: 20px;
-      font-size: 10px; font-weight: 500;
-    }
-    .badge.green { background: rgba(74,222,128,0.12); color: var(--green); }
-    .badge.red   { background: rgba(248,113,113,0.12); color: var(--red); }
-    .badge.gold  { background: var(--gold-dim); color: var(--gold-light); }
-    .badge.grey  { background: rgba(26,21,16,0.08); color: var(--cream-faint); }
-
-    /* ── TWO-COL GRID ── */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 24px;
-    }
-
-    /* ── PANEL ── */
-    .panel {
-      background: var(--navy-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-    }
-
-    .panel-head {
-      padding: 18px 22px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-    }
-
-    .panel-title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 17px; font-weight: 400; color: var(--cream);
-    }
-
-    .panel-body { padding: 0; }
-
-    /* ── TABLE ── */
-    .data-table { width: 100%; border-collapse: collapse; }
-    .data-table th {
-      font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
-      color: var(--cream-faint); padding: 10px 22px;
-      text-align: left; background: rgba(0,0,0,0.03);
-      border-bottom: 1px solid var(--border);
-    }
-    .data-table td {
-      padding: 13px 22px;
-      font-size: 13px; color: var(--cream-dim);
-      border-bottom: 1px solid rgba(160,130,60,0.08);
-    }
-    .data-table tr:last-child td { border-bottom: none; }
-    .data-table tr:hover td { background: rgba(201,168,76,0.05); color: var(--cream); }
-
-    .data-table td.amount { color: var(--cream); font-weight: 500; font-variant-numeric: tabular-nums; }
-    .data-table td.due    { color: var(--gold); font-size: 11px; }
-    .data-table td.name   { color: var(--cream); font-weight: 500; }
-
-    .paid-pill {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 3px 9px; border-radius: 20px;
-      font-size: 10px; font-weight: 500; cursor: pointer;
-      transition: all 0.2s;
-    }
-    .paid-pill.paid   { background: rgba(74,222,128,0.12); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
-    .paid-pill.unpaid { background: rgba(248,113,113,0.08); color: #fca5a5; border: 1px solid rgba(248,113,113,0.2); }
-
-    /* ── CHART ── */
-    .chart-wrap {
-      padding: 20px 22px;
-      height: 240px;
-      position: relative;
-    }
-
-    /* ── CARDS GRID ── */
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 14px;
-      padding: 20px 22px;
-    }
-
-    .credit-card {
-      border-radius: 12px;
-      padding: 18px;
-      background: #faf8f5;
-      border: 1px solid var(--border);
-      transition: all 0.2s ease;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    }
-
-    .credit-card::before {
-      content: '';
-      position: absolute;
-      top: -40px; right: -40px;
-      width: 100px; height: 100px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(201,168,76,0.06), transparent);
-    }
-
-    .credit-card:hover {
-      border-color: var(--border-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    }
-
-    /* Disconnected state — muted, greyed out */
-    .credit-card.disconnected {
-      opacity: 0.55;
-      background: #f5f3f0;
-      cursor: default;
-    }
-    .credit-card.disconnected:hover {
-      transform: none;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    }
-    .credit-card.disconnected::after {
-      content: 'Not Connected';
-      position: absolute;
-      top: 10px; right: 10px;
-      font-size: 9px;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--cream-faint);
-      background: rgba(26,21,16,0.07);
-      padding: 2px 7px;
-      border-radius: 10px;
-    }
-
-    .cc-name { font-size: 11px; color: var(--cream-faint); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
-    .cc-balance {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 24px; font-weight: 400; color: var(--cream);
-      margin-bottom: 12px;
-    }
-    .cc-balance.no-data {
-      font-size: 16px;
-      color: var(--cream-faint);
-      font-style: italic;
-      font-family: 'DM Sans', sans-serif;
-    }
-
-    .cc-row { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
-    .cc-key { font-size: 10px; color: var(--cream-faint); }
-    .cc-val { font-size: 11px; color: var(--cream-dim); font-weight: 500; }
-
-    .cc-due-soon { border-color: rgba(248,113,113,0.3) !important; }
-    .cc-due-soon .cc-name { color: rgba(248,113,113,0.7); }
-
-    .cc-use {
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid var(--border);
-      font-size: 10px;
-      color: var(--cream-faint);
-      line-height: 1.5;
-      font-style: italic;
-    }
-
-    /* ── PLAID CONNECTED BADGE ── */
-    .plaid-live {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 2px 7px; border-radius: 20px;
-      font-size: 9px; font-weight: 600;
-      background: rgba(74,222,128,0.1);
-      color: var(--green);
-      letter-spacing: 0.5px;
-    }
-    .plaid-live::before {
-      content: '';
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      background: var(--green);
-      display: inline-block;
-      animation: pulse 2s ease infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    /* ── PROGRESS BAR ── */
-    .progress-bar {
-      height: 4px;
-      background: rgba(0,0,0,0.08);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-top: 8px;
-    }
-    .progress-fill {
-      height: 100%;
-      border-radius: 2px;
-      background: linear-gradient(90deg, var(--gold), var(--gold-light));
-      transition: width 0.8s ease;
-    }
-    .progress-fill.over { background: linear-gradient(90deg, var(--red), #fca5a5); }
-
-    /* ── EMPTY STATE ── */
-    .empty-state {
-      padding: 60px 22px;
-      text-align: center;
-    }
-    .empty-state svg { width: 48px; height: 48px; color: var(--cream-faint); margin-bottom: 16px; opacity: 0.4; }
-    .empty-state h3 { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--cream-dim); margin-bottom: 8px; }
-    .empty-state p { font-size: 12px; color: var(--cream-faint); }
-
-    /* ── TOAST ── */
-    .toast {
-      position: fixed; bottom: 28px; right: 28px;
-      background: #1a1510;
-      border: 1px solid rgba(201,168,76,0.3);
-      border-radius: 10px;
-      padding: 12px 18px;
-      font-size: 13px; color: #f5f0e8;
-      z-index: 999;
-      display: flex; align-items: center; gap: 8px;
-      transform: translateY(20px); opacity: 0;
-      transition: all 0.3s ease;
-      pointer-events: none;
-    }
-    .toast.show { transform: translateY(0); opacity: 1; }
-
-    /* ── TRANSACTIONS ── */
-    .txn-list { max-height: 400px; overflow-y: auto; }
-    .txn-list::-webkit-scrollbar { width: 4px; }
-    .txn-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    .txn-item {
-      display: flex; align-items: center; gap: 14px;
-      padding: 12px 22px;
-      border-bottom: 1px solid rgba(201,168,76,0.05);
-      transition: background 0.15s;
-    }
-    .txn-item:hover { background: rgba(201,168,76,0.03); }
-    .txn-item:last-child { border-bottom: none; }
-
-    .txn-icon {
-      width: 36px; height: 36px;
-      border-radius: 10px;
-      background: #f0ece4;
-      border: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px; flex-shrink: 0;
-    }
-
-    .txn-info { flex: 1; min-width: 0; }
-    .txn-name { font-size: 13px; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .txn-cat  { font-size: 11px; color: var(--cream-faint); }
-    .txn-date { font-size: 11px; color: var(--cream-faint); white-space: nowrap; }
-    .txn-amt  { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .txn-amt.debit  { color: var(--red); }
-    .txn-amt.credit { color: var(--green); }
-
-    /* ── INCOME SECTION ── */
-    .income-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .income-card {
-      background: var(--navy-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 22px 24px;
-      position: relative; overflow: hidden;
-      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-    }
-    .income-card::after {
-      content: '';
-      position: absolute;
-      bottom: -20px; right: -20px;
-      width: 120px; height: 120px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(201,168,76,0.06), transparent);
-    }
-
-    .income-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--cream-faint); margin-bottom: 6px; }
-    .income-source { font-size: 13px; color: var(--cream-dim); margin-bottom: 10px; }
-    .income-amount { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; color: var(--green); line-height: 1; }
-    .income-type   { font-size: 11px; color: var(--cream-faint); margin-top: 6px; }
-
-    /* Income deposits list */
-    .income-deposits {
-      margin-top: 16px;
-      border-top: 1px solid var(--border);
-      padding-top: 12px;
-      max-height: 180px;
-      overflow-y: auto;
-    }
-    .income-deposit-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 0;
-      border-bottom: 1px solid rgba(160,130,60,0.06);
-      font-size: 11px;
-    }
-    .income-deposit-item:last-child { border-bottom: none; }
-    .income-deposit-name { color: var(--cream-dim); flex: 1; }
-    .income-deposit-date { color: var(--cream-faint); margin: 0 10px; }
-    .income-deposit-amt  { color: var(--green); font-weight: 600; font-variant-numeric: tabular-nums; }
-
-    .income-placeholder {
-      font-size: 12px;
-      color: var(--cream-faint);
-      font-style: italic;
-      margin-top: 8px;
-    }
-
-    /* ── SKELETON ── */
-    .skeleton {
-      background: linear-gradient(90deg, #f0ece4 25%, #e8e2d8 50%, #f0ece4 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: 4px;
-    }
-    @keyframes shimmer { to { background-position: -200% 0; } }
-
-    /* ══ RESPONSIVE ══ */
-    @media (max-width: 1100px) {
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 900px) {
-      .grid-2 { grid-template-columns: 1fr; }
-      .income-row { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 768px) {
-      :root { --sidebar-w: 0px; }
-      .sidebar { transform: translateX(-240px); }
-      .sidebar.open { transform: translateX(0); }
-      .main { margin-left: 0; }
-      .content { padding: 20px 16px 40px; }
-      .stats-row { grid-template-columns: 1fr 1fr; }
-      .topbar { padding: 0 16px; }
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>B&B Finance — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #f7f5f2;
+  --navy-mid: #ffffff;
+  --navy-card: #ffffff;
+  --navy-hover: #f0ece4;
+  --border: rgba(160, 130, 60, 0.15);
+  --border-hover: rgba(160, 130, 60, 0.35);
+  --gold: #a07830;
+  --gold-light: #c9a84c;
+  --gold-dim: rgba(201, 168, 76, 0.1);
+  --cream: #1a1510;
+  --cream-dim: rgba(26, 21, 16, 0.65);
+  --cream-faint: rgba(26, 21, 16, 0.38);
+  --green: #16a34a;
+  --red: #dc2626;
+  --blue: #2563eb;
+  --sidebar-w: 240px;
+}
+html { font-size: 14px; }
+body {
+  background: var(--navy);
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+  min-height: 100vh;
+  display: flex;
+  overflow-x: hidden;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--navy-mid);
+  border-right: 1px solid var(--border);
+  box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+.sidebar-logo {
+  padding: 28px 24px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo-badge {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px; font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(160,120,48,0.3);
+}
+.logo-info { display: flex; flex-direction: column; }
+.logo-info .name { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; color: var(--cream); letter-spacing: 0.3px; }
+.logo-info .tag { font-size: 10px; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; }
+.sidebar-nav { flex: 1; padding: 20px 12px; display: flex; flex-direction: column; gap: 2px; }
+.nav-section-label { font-size: 9px; color: var(--cream-faint); letter-spacing: 2.5px; text-transform: uppercase; padding: 8px 12px 4px; margin-top: 8px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--cream-dim);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-size: 13px; font-weight: 400;
+  border: 1px solid transparent;
+}
+.nav-item:hover { background: var(--gold-dim); color: var(--cream); border-color: var(--border); }
+.nav-item.active { background: var(--gold-dim); color: var(--gold-light); border-color: var(--border-hover); font-weight: 500; }
+.nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+.sidebar-user {
+  padding: 16px 16px 20px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.user-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--navy-card); border: 1.5px solid var(--border); overflow: hidden; flex-shrink: 0; }
+.user-avatar .initials { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--gold); }
+.user-details { flex: 1; min-width: 0; }
+.user-name { font-size: 12px; font-weight: 500; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-sub { font-size: 10px; color: var(--cream-faint); }
+
+/* ── MAIN ── */
+.main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+.topbar {
+  height: 64px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px;
+  background: var(--navy-mid);
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-left { display: flex; flex-direction: column; }
+.topbar-greeting { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-style: italic; font-weight: 300; color: var(--cream); }
+.topbar-date { font-size: 11px; color: var(--cream-faint); margin-top: 1px; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.plaid-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+  color: #fff;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; border: none;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+.plaid-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,168,76,0.3); }
+.plaid-btn svg { width: 13px; height: 13px; }
+.refresh-btn {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--cream-dim);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s;
+}
+.refresh-btn:hover { background: var(--gold-dim); color: var(--gold-light); }
+.refresh-btn svg { width: 14px; height: 14px; }
+.refresh-btn.spinning svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── CONTENT ── */
+.content { padding: 28px 32px 48px; flex: 1; }
+.view { display: none; }
+.view.active { display: block; }
+.section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.section-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 400; color: var(--cream); letter-spacing: 0.3px; }
+.section-title span { color: var(--gold); font-style: italic; }
+
+/* ── STAT CARDS ── */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--navy-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 22px;
+  transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
+  animation: cardIn 0.6s ease both;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+.stat-card:hover { border-color: var(--border-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+@keyframes cardIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.stat-card:nth-child(1) { animation-delay: 0.05s; }
+.stat-card:nth-child(2) { animation-delay: 0.1s; }
+.stat-card:nth-child(3) { animation-delay: 0.15s; }
+.stat-card:nth-child(4) { animation-delay: 0.2s; }
+.stat-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--cream-faint); margin-bottom: 10px; }
+.stat-value { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: var(--cream); line-height: 1; }
+.stat-value.green { color: var(--green); }
+.stat-value.red { color: var(--red); }
+.stat-value.gold { color: var(--gold-light); }
+.stat-meta { font-size: 11px; color: var(--cream-faint); margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+.badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 500; }
+.badge.green { background: rgba(74,222,128,0.12); color: var(--green); }
+.badge.red { background: rgba(248,113,113,0.12); color: var(--red); }
+.badge.gold { background: var(--gold-dim); color: var(--gold-light); }
+.badge.blue { background: rgba(37,99,235,0.1); color: var(--blue); }
+
+/* ── TWO-COL GRID ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+
+/* ── PANEL ── */
+.panel { background: var(--navy-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+.panel-head { padding: 18px 22px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.panel-title { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 400; color: var(--cream); }
+.panel-body { padding: 0; }
+
+/* ── TABLE ── */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--cream-faint); padding: 10px 22px; text-align: left; background: rgba(0,0,0,0.03); border-bottom: 1px solid var(--border); }
+.data-table td { padding: 13px 22px; font-size: 13px; color: var(--cream-dim); border-bottom: 1px solid rgba(160,130,60,0.08); }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: rgba(201,168,76,0.05); color: var(--cream); }
+.data-table td.amount { color: var(--cream); font-weight: 500; font-variant-numeric: tabular-nums; }
+.data-table td.due { color: var(--gold); font-size: 11px; }
+.data-table td.name { color: var(--cream); font-weight: 500; }
+.paid-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.paid-pill.paid { background: rgba(74,222,128,0.12); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+.paid-pill.unpaid { background: rgba(248,113,113,0.08); color: #fca5a5; border: 1px solid rgba(248,113,113,0.2); }
+
+/* ── CHART ── */
+.chart-wrap { padding: 20px 22px; height: 240px; position: relative; }
+
+/* ── CREDIT CARDS GRID ── */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; padding: 20px 22px; }
+.credit-card {
+  border-radius: 12px;
+  padding: 20px;
+  background: #faf8f5;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.credit-card::before { content: ''; position: absolute; top: -40px; right: -40px; width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle, rgba(201,168,76,0.06), transparent); }
+.credit-card:hover { border-color: var(--border-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+.credit-card.overdue { border-color: rgba(220,38,38,0.3) !important; }
+.cc-bank { font-size: 10px; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 3px; }
+.cc-name { font-size: 12px; color: var(--cream-dim); margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cc-balance { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: var(--cream); margin-bottom: 14px; line-height: 1; }
+.cc-divider { height: 1px; background: var(--border); margin: 10px 0; }
+.cc-row { display: flex; justify-content: space-between; align-items: center; margin-top: 7px; }
+.cc-key { font-size: 10px; color: var(--cream-faint); }
+.cc-val { font-size: 12px; color: var(--cream-dim); font-weight: 500; }
+.cc-val.due-soon { color: var(--red); }
+.cc-val.overdue { color: var(--red); font-weight: 600; }
+.cc-val.ok { color: var(--green); }
+.cc-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 500; }
+.cc-badge.overdue-badge { background: rgba(220,38,38,0.1); color: var(--red); }
+.cc-badge.soon-badge { background: rgba(245,158,11,0.1); color: #d97706; }
+.cc-badge.ok-badge { background: rgba(22,163,74,0.1); color: var(--green); }
+.cc-util-bar { margin-top: 10px; }
+.cc-util-label { font-size: 9px; color: var(--cream-faint); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; }
+.progress-bar { height: 4px; background: rgba(0,0,0,0.08); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--gold), var(--gold-light)); transition: width 0.8s ease; }
+.progress-fill.warn { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.progress-fill.over { background: linear-gradient(90deg, var(--red), #fca5a5); }
+
+/* ── INCOME ── */
+.income-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.income-card {
+  background: var(--navy-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 24px;
+  position: relative; overflow: hidden;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+.income-card::after { content: ''; position: absolute; bottom: -20px; right: -20px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(201,168,76,0.06), transparent); }
+.income-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--cream-faint); margin-bottom: 4px; }
+.income-source { font-size: 13px; color: var(--cream-dim); margin-bottom: 10px; font-style: italic; }
+.income-amount { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; color: var(--green); line-height: 1; }
+.income-type { font-size: 11px; color: var(--cream-faint); margin-top: 6px; }
+
+/* ── CONNECTED ACCOUNTS TABLE ── */
+.accounts-list { padding: 0; }
+.account-row { display: flex; align-items: center; gap: 14px; padding: 14px 22px; border-bottom: 1px solid rgba(160,130,60,0.08); transition: background 0.15s; }
+.account-row:hover { background: rgba(201,168,76,0.03); }
+.account-row:last-child { border-bottom: none; }
+.account-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--gold-dim); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.account-info { flex: 1; min-width: 0; }
+.account-name { font-size: 13px; color: var(--cream); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.account-sub { font-size: 11px; color: var(--cream-faint); margin-top: 2px; }
+.account-role-badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.role-income { background: rgba(22,163,74,0.1); color: var(--green); }
+.role-boa { background: rgba(37,99,235,0.1); color: var(--blue); }
+.role-credit { background: var(--gold-dim); color: var(--gold); }
+.role-bank { background: rgba(139,92,246,0.1); color: #7c3aed; }
+.role-other { background: rgba(0,0,0,0.05); color: var(--cream-faint); }
+.account-balance { font-size: 14px; font-weight: 500; color: var(--cream); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ── EMPTY / SKELETON ── */
+.empty-state { padding: 60px 22px; text-align: center; }
+.empty-state svg { width: 48px; height: 48px; color: var(--cream-faint); margin-bottom: 16px; opacity: 0.4; }
+.empty-state h3 { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--cream-dim); margin-bottom: 8px; }
+.empty-state p { font-size: 12px; color: var(--cream-faint); }
+.skeleton { background: linear-gradient(90deg, #f0ece4 25%, #e8e2d8 50%, #f0ece4 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ── TOAST ── */
+.toast { position: fixed; bottom: 28px; right: 28px; background: #1a1510; border: 1px solid rgba(201,168,76,0.3); border-radius: 10px; padding: 12px 18px; font-size: 13px; color: #f5f0e8; z-index: 999; display: flex; align-items: center; gap: 8px; transform: translateY(20px); opacity: 0; transition: all 0.3s ease; pointer-events: none; }
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1100px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } .income-row { grid-template-columns: 1fr; } }
+@media (max-width: 768px) {
+  :root { --sidebar-w: 0px; }
+  .sidebar { transform: translateX(-240px); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .content { padding: 20px 16px 40px; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .topbar { padding: 0 16px; }
+}
+
+/* ── INCOME TYPE PILLS ── */
+.income-type-pills { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 4px; }
+.income-type-pill {
+  display: flex; flex-direction: column;
+  background: var(--navy-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 18px;
+  min-width: 130px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.itp-label { font-size: 10px; color: var(--cream-faint); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px; }
+.itp-amount { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--green); font-weight: 400; }
+.itp-count { font-size: 10px; color: var(--cream-faint); margin-top: 3px; }
+.txn-type-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 500; background: rgba(22,163,74,0.1); color: var(--green); }
+.txn-type-badge.ach { background: rgba(37,99,235,0.1); color: var(--blue); }
+.txn-type-badge.eft { background: rgba(124,58,237,0.1); color: #7c3aed; }
+.txn-type-badge.commission { background: rgba(201,168,76,0.15); color: var(--gold); }
+.txn-type-badge.payroll { background: rgba(22,163,74,0.12); color: var(--green); }
+.txn-type-badge.transfer { background: rgba(0,0,0,0.07); color: var(--cream-dim); }
+
+</style>
 </head>
 <body>
 
-<!-- ═══ SIDEBAR ═══ -->
+<!-- ═══════════════════════ SIDEBAR ═══════════════════════ -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="logo-badge">B&B</div>
@@ -645,7 +331,6 @@
       <span class="tag">Private</span>
     </div>
   </div>
-
   <nav class="sidebar-nav">
     <span class="nav-section-label">Overview</span>
     <div class="nav-item active" data-view="dashboard" onclick="switchView('dashboard', this)">
@@ -656,11 +341,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
       Credit Cards
     </div>
-    <div class="nav-item" data-view="transactions" onclick="switchView('transactions', this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-      Transactions
-    </div>
-
     <span class="nav-section-label">Budget</span>
     <div class="nav-item" data-view="monthly" onclick="switchView('monthly', this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -675,26 +355,19 @@
       Income
     </div>
   </nav>
-
   <div class="sidebar-user">
-    <div class="user-avatar" id="userAvatar">
-      <div class="initials" id="userInitials">BB</div>
+    <div class="user-avatar">
+      <div class="initials">BB</div>
     </div>
     <div class="user-details">
-      <div class="user-name" id="userName">Loading…</div>
-      <div class="user-email" id="userEmail"></div>
+      <div class="user-name">Brad & Beza</div>
+      <div class="user-sub" id="linkedStatus">No accounts linked</div>
     </div>
-    <button class="logout-btn" onclick="window.location.href='/auth/logout'" title="Sign out">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
-        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
-      </svg>
-    </button>
   </div>
 </aside>
 
-<!-- ═══ MAIN ═══ -->
+<!-- ═══════════════════════ MAIN ═══════════════════════ -->
 <div class="main">
-
   <header class="topbar">
     <div class="topbar-left">
       <span class="topbar-greeting" id="greeting">Good morning</span>
@@ -720,15 +393,15 @@
 
     <!-- ═══ DASHBOARD ═══ -->
     <div class="view active" id="view-dashboard">
-      <div class="stats-row" id="statsRow">
+      <div class="stats-row">
         <div class="stat-card">
-          <div class="stat-label">Monthly Income</div>
+          <div class="stat-label">Checking Balance</div>
           <div class="stat-value green" id="statIncome">—</div>
-          <div class="stat-meta"><span class="badge green" id="incomeSourceBadge">2 sources</span></div>
+          <div class="stat-meta"><span class="badge green" id="statIncomeLabel">Adv Plus ···2429</span></div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Monthly Expenses</div>
-          <div class="stat-value red" id="statExpenses">—</div>
+          <div class="stat-value red" id="statExpenses">$5,381</div>
           <div class="stat-meta"><span class="badge red" id="expenseCount">18 items</span></div>
         </div>
         <div class="stat-card">
@@ -739,7 +412,7 @@
         <div class="stat-card">
           <div class="stat-label">Total Card Debt</div>
           <div class="stat-value" id="statDebt">—</div>
-          <div class="stat-meta" id="statDebtMeta"><span class="badge red">8 cards</span></div>
+          <div class="stat-meta" id="statDebtMeta"><span class="badge red" id="cardCount">— cards</span></div>
         </div>
       </div>
 
@@ -760,11 +433,9 @@
           <span class="badge gold" id="upcomingCount">—</span>
         </div>
         <div class="panel-body">
-          <table class="data-table" id="upcomingTable">
+          <table class="data-table">
             <thead>
-              <tr>
-                <th>Item</th><th>Type</th><th>Due</th><th>Amount</th><th>Status</th>
-              </tr>
+              <tr><th>Item</th><th>Type</th><th>Due</th><th>Amount</th><th>Status</th></tr>
             </thead>
             <tbody id="upcomingBody"></tbody>
           </table>
@@ -776,46 +447,33 @@
     <div class="view" id="view-cards">
       <div class="section-hdr">
         <h2 class="section-title">Credit <span>Cards</span></h2>
-        <span class="badge gold" id="totalDueLabel">—</span>
+        <span class="badge red" id="totalDueLabel">—</span>
       </div>
 
-      <!-- Legend -->
-      <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;font-size:11px;color:var(--cream-faint);">
-        <span class="plaid-live">Live balance</span>
-        <span>= pulled from Plaid &nbsp;·&nbsp; Greyed-out cards have no connected account</span>
+      <!-- Live Plaid credit cards -->
+      <div id="plaidCardsWrap">
+        <div class="cards-grid" id="cardsGrid">
+          <div class="empty-state" style="grid-column: 1/-1;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            <h3>No credit cards linked</h3>
+            <p>Connect your bank via Plaid to see live balances and due dates</p>
+          </div>
+        </div>
       </div>
 
-      <div class="cards-grid" id="cardsGrid"></div>
-
+      <!-- Connected accounts panel -->
       <div style="margin-top: 24px;">
         <div class="panel">
           <div class="panel-head">
             <span class="panel-title">Connected Accounts</span>
             <button class="plaid-btn" style="font-size:11px;padding:7px 14px;" onclick="connectPlaid()">+ Connect Bank</button>
           </div>
-          <div class="panel-body" id="plaidAccountsPanel">
+          <div id="connectedAccountsBody" class="accounts-list">
             <div class="empty-state">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
               <h3>No banks connected</h3>
               <p>Connect your accounts via Plaid to see live balances</p>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══ TRANSACTIONS ═══ -->
-    <div class="view" id="view-transactions">
-      <div class="section-hdr">
-        <h2 class="section-title">Recent <span>Transactions</span></h2>
-        <span class="badge gold" id="txnCount">—</span>
-      </div>
-      <div class="panel">
-        <div class="panel-body txn-list" id="txnList">
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-            <h3>No transactions yet</h3>
-            <p>Connect a bank account to see your transactions</p>
           </div>
         </div>
       </div>
@@ -827,25 +485,17 @@
         <h2 class="section-title">Monthly <span>Expenses</span></h2>
         <span id="monthlyTotalBadge" class="badge red">—</span>
       </div>
-
       <div class="panel" style="margin-bottom:20px;padding:20px 24px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <span style="font-size:12px;color:var(--cream-dim);">Payment Progress</span>
           <span style="font-size:12px;color:var(--cream-dim);" id="progressLabel">0 / 0 paid</span>
         </div>
-        <div class="progress-bar" style="height:6px;">
-          <div class="progress-fill" id="progressFill" style="width:0%;"></div>
-        </div>
+        <div class="progress-bar" style="height:6px;"><div class="progress-fill" id="progressFill" style="width:0%;"></div></div>
       </div>
-
       <div class="panel">
         <div class="panel-body">
-          <table class="data-table" id="monthlyTable">
-            <thead>
-              <tr>
-                <th>Category</th><th>Amount</th><th>Due Date</th><th>Type</th><th>Status</th>
-              </tr>
-            </thead>
+          <table class="data-table">
+            <thead><tr><th>Category</th><th>Amount</th><th>Due Date</th><th>Type</th><th>Status</th></tr></thead>
             <tbody id="monthlyBody"></tbody>
           </table>
         </div>
@@ -860,17 +510,12 @@
       </div>
       <div class="panel">
         <div class="panel-body">
-          <table class="data-table" id="yearlyTable">
-            <thead>
-              <tr>
-                <th>Category</th><th>Amount</th><th>Due Date</th><th>Monthly Equiv.</th>
-              </tr>
-            </thead>
+          <table class="data-table">
+            <thead><tr><th>Category</th><th>Amount</th><th>Due Date</th><th>Monthly Equiv.</th></tr></thead>
             <tbody id="yearlyBody"></tbody>
           </table>
         </div>
       </div>
-
       <div style="margin-top:20px;">
         <div class="panel">
           <div class="panel-head"><span class="panel-title">Car Insurance (Semi-Annual)</span></div>
@@ -891,17 +536,53 @@
     <div class="view" id="view-income">
       <div class="section-hdr">
         <h2 class="section-title">Income <span>Overview</span></h2>
-        <span class="badge gold" id="incomeLiveBadge">—</span>
+        <button class="plaid-btn" style="font-size:11px;padding:7px 14px;" onclick="loadIncomeTxns()">↻ Refresh</button>
       </div>
 
-      <!-- Two income cards: Brad and Beza -->
+      <!-- Live Plaid balance card -->
+      <div id="plaidIncomeSection" style="margin-bottom:20px;"></div>
+
+      <!-- Income type breakdown badges -->
+      <div id="incomeTypeBreakdown" style="margin-bottom:20px;"></div>
+
+      <!-- This month's income transactions from Plaid -->
+      <div class="panel" style="margin-bottom:20px;">
+        <div class="panel-head">
+          <span class="panel-title">Income Deposits — This Month</span>
+          <span class="badge green" id="thisMonthIncomeTotal">—</span>
+        </div>
+        <div class="panel-body">
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="thisMonthIncomeTxns">
+              <tr><td colspan="5" style="text-align:center;color:var(--cream-faint);padding:30px;">Connect Plaid to see income deposits</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Last 90 days all income transactions -->
+      <div class="panel" style="margin-bottom:20px;">
+        <div class="panel-head">
+          <span class="panel-title">All Income — Last 90 Days</span>
+          <span class="badge gold" id="allIncomeTotal">—</span>
+        </div>
+        <div class="panel-body">
+          <table class="data-table" id="allIncomeTxnsTable">
+            <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th></tr></thead>
+            <tbody id="allIncomeTxns">
+              <tr><td colspan="4" style="text-align:center;color:var(--cream-faint);padding:30px;">No data yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Static estimated income cards -->
       <div class="income-row" id="incomeCards"></div>
 
       <div class="panel">
         <div class="panel-head"><span class="panel-title">Income vs. Expenses Summary</span></div>
-        <div class="chart-wrap" style="height:280px;">
-          <canvas id="summaryChart"></canvas>
-        </div>
+        <div class="chart-wrap" style="height:280px;"><canvas id="summaryChart"></canvas></div>
       </div>
     </div>
 
@@ -911,852 +592,74 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-
 <script>
-// ═══════════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// STATIC BUDGET DATA (always shown)
+// ════════════════════════════════════════════════
+const MONTHLY_EXPENSES = [
+  { name: 'Rent', amount: 2000, due: '1st', type: 'Housing', paid: false },
+  { name: 'Electric (GA Power)', amount: 135, due: '15th', type: 'Utilities', paid: false },
+  { name: 'Internet (Xfinity)', amount: 55, due: '14th', type: 'Utilities', paid: false },
+  { name: 'Phone (T-Mobile)', amount: 160, due: '10th', type: 'Phone', paid: false },
+  { name: 'Netflix', amount: 22.99, due: '8th', type: 'Subscriptions', paid: false },
+  { name: 'Spotify', amount: 16.99, due: '5th', type: 'Subscriptions', paid: false },
+  { name: 'YouTube Premium', amount: 13.99, due: '22nd', type: 'Subscriptions', paid: false },
+  { name: 'iCloud Storage', amount: 2.99, due: '15th', type: 'Subscriptions', paid: false },
+  { name: 'Amazon Prime', amount: 14.99, due: '20th', type: 'Subscriptions', paid: false },
+  { name: 'Gym (LA Fitness)', amount: 35, due: '1st', type: 'Health', paid: false },
+  { name: 'Groceries', amount: 600, due: 'Ongoing', type: 'Food', paid: false },
+  { name: 'Gas', amount: 200, due: 'Ongoing', type: 'Transport', paid: false },
+  { name: 'Dining Out', amount: 300, due: 'Ongoing', type: 'Food', paid: false },
+  { name: 'Car Payment (Brad)', amount: 350, due: '5th', type: 'Auto', paid: false },
+  { name: 'Car Payment (Beza)', amount: 0, due: '—', type: 'Auto', paid: false },
+  { name: 'Car Insurance (Progressive)', amount: 188.92, due: '7th', type: 'Insurance', paid: false },
+  { name: 'Car Insurance (GM)', amount: 129.95, due: '1st', type: 'Insurance', paid: false },
+  { name: 'Miscellaneous', amount: 150, due: 'Ongoing', type: 'Other', paid: false },
+];
 
-let budgetData  = null;
-let plaidAccounts = [];        // live accounts from Plaid
-let plaidTransactions = [];    // live txns from Plaid
-let paidState   = {};
-let plaidHandler = null;
-let charts      = {};
+const YEARLY_EXPENSES = [
+  { name: 'Amazon Prime Annual', amount: 139, due: 'Nov', monthly: 11.58 },
+  { name: 'Apple TV+', amount: 99, due: 'Sep', monthly: 8.25 },
+  { name: 'Costco Membership', amount: 65, due: 'Mar', monthly: 5.42 },
+];
 
-// ═══════════════════════════════════════════════
-//  STATIC BUDGET DATA
-// ═══════════════════════════════════════════════
-const STATIC_BUDGET = {
-  monthlyExpenses: [
-    { category: 'Rent',               amount: 1600,   dueDate: '1st',     type: 'Bank (BoA)' },
-    { category: 'Truck',              amount: 554,     dueDate: '3rd',     type: 'Bank (BoA)' },
-    { category: 'Utilities',          amount: 75,      dueDate: '10th',    type: 'Bank (BoA)' },
-    { category: 'Student Loan',       amount: 242,     dueDate: '17th',    type: 'Bank (BoA)' },
-    { category: 'Tesla',              amount: 618,     dueDate: '24th',    type: 'Bank (BoA)' },
-    { category: 'T-Mobile',           amount: 155,     dueDate: '25th',    type: 'Bank (BoA)' },
-    { category: 'aidVantage',         amount: 124.72,  dueDate: '28th',    type: 'Bank (BoA)' },
-    { category: 'Car Wash (Brad)',    amount: 20,      dueDate: '19th',    type: 'Credit Card (RH)' },
-    { category: 'Lemonade Insurance', amount: 26.91,   dueDate: '12th',    type: 'Credit Card (RH)' },
-    { category: 'Car Wash (Beza)',    amount: 20,      dueDate: '21st',    type: 'Credit Card' },
-    { category: 'Internet',           amount: 50.26,   dueDate: '25th',    type: 'Credit Card (RH)' },
-    { category: 'Ringy',              amount: 109,     dueDate: '26th',    type: 'Credit Card (GSA)' },
-    { category: 'iPhone',             amount: 41.62,   dueDate: '30th',    type: 'Credit Card (GSA)' },
-    { category: 'Apple Watch',        amount: 35.75,   dueDate: '30th',    type: 'Credit Card (GSA)' },
-    { category: 'F45',                amount: 169,     dueDate: 'Monthly', type: 'Credit Card (RH)' },
-    { category: 'Lashes',             amount: 100,     dueDate: 'Random',  type: 'Credit Card (RH)' },
-    { category: 'TxTag',              amount: 40,      dueDate: 'Random',  type: 'Credit Card (RH)' },
-    { category: 'Tithe/Offering',     amount: 1400,    dueDate: 'Monthly', type: 'Withdraw' },
-  ],
-  yearlyExpenses: [
-    { category: 'AMEX Gold',       amount: 325,  dueDate: '5/23' },
-    { category: 'AMEX Platinum',   amount: 895,  dueDate: '7/16' },
-    { category: 'AMEX Platinum 2', amount: 195,  dueDate: '7/16' },
-    { category: 'E&O Insurance',   amount: 432,  dueDate: '8/1'  },
-    { category: 'AMEX Blue',       amount: 95,   dueDate: '8/7'  },
-    { category: 'Venture',         amount: 95,   dueDate: '8/10' },
-    { category: 'Zoom',            amount: 156,  dueDate: '8/30' },
-    { category: 'Calendly',        amount: 112,  dueDate: '8/30' },
-    { category: 'AMEX Delta',      amount: 175,  dueDate: '11/15'},
-  ],
-  // Fallback static income (used if no Plaid BoA deposits found)
-  income: [
-    { source: 'Brad — GM',         amount: 8000,   type: 'Bank (BoA)', person: 'brad', static: true },
-    { source: 'Beza — Insurance',  amount: 2833.59, type: 'Bank (BoA)', person: 'beza', static: true },
-  ],
-  // Card definitions.
-  // plaidMask     — exact last-4 from Plaid (highest priority match)
-  // plaidKeywords — lowercase substrings to match against Plaid account name (any one match wins)
-  // Both are optional; if neither matches, card shows as "Not Connected"
-  cards: [
-    {
-      name: 'Apple Card',
-      balance: null, dueDate: '5/30/2026', nextStatement: null,
-      useCase: 'Chargepoint (3%) + random (tap 2%), iPhone, Apple Watch',
-      plaidMask: null,
-      plaidKeywords: ['apple card', 'apple credit', 'apple bank']
-    },
-    {
-      name: 'Bank of America CC',
-      balance: null, dueDate: '6/5/2026', nextStatement: null,
-      useCase: '3% online shopping, Tesla Sub',
-      plaidMask: null,
-      plaidKeywords: ['bank of america credit', 'bofa credit', 'boa credit', 'bankamericard']
-    },
-    {
-      name: 'AMEX Platinum (···1006)',
-      balance: null, dueDate: '6/10/2026', nextStatement: null,
-      useCase: 'Airfare, hotels, rentals, HULU, Walmart, Peacock',
-      plaidMask: '1006',
-      plaidKeywords: ['american express platinum', 'amex platinum', 'platinum card']
-    },
-    {
-      name: 'AMEX Gold (···1005)',
-      balance: null, dueDate: '6/17/2026', nextStatement: null,
-      useCase: 'Eating out (4%), carwash, Dunkin',
-      plaidMask: '1005',
-      plaidKeywords: ['american express gold', 'amex gold', 'gold card']
-    },
-    {
-      name: 'AMEX Blue (···1008)',
-      balance: null, dueDate: '6/1/2026', nextStatement: null,
-      useCase: 'Grocery (6%) & gas (4%)',
-      plaidMask: '1008',
-      plaidKeywords: ['american express blue', 'amex blue', 'blue cash', 'blue from amex']
-    },
-    {
-      name: 'RobinHood',
-      balance: null, dueDate: '6/17/2026', nextStatement: null,
-      useCase: 'Random (3% back all), Tesla Insurance, Ringy, etc.',
-      plaidMask: null,
-      plaidKeywords: ['robinhood', 'robin hood']
-    },
-    {
-      name: 'Amazon',
-      balance: null, dueDate: '6/10/2026', nextStatement: null,
-      useCase: 'All Amazon (5% cashback)',
-      plaidMask: null,
-      plaidKeywords: ['amazon', 'amazon prime rewards', 'amazon visa', 'amazon store']
-    },
-    {
-      name: 'Venmo',
-      balance: null, dueDate: '6/7/2026', nextStatement: null,
-      useCase: '1-3% on highest categories',
-      plaidMask: null,
-      plaidKeywords: ['venmo', 'venmo credit', 'venmo visa']
-    },
-  ]
-};
+// Static income (supplemented by live Plaid data)
+const STATIC_INCOME = [
+  { label: 'Monthly Salary', source: 'Brad — Primary Employment', amount: 7500, type: 'Net monthly (est.)' },
+  { label: 'Secondary Income', source: 'Beza — Employment', amount: 3334, type: 'Net monthly (est.)' },
+];
 
-// GM deposit keywords — any Plaid deposit whose name matches these = Brad's income
-const GM_KEYWORDS = ['gm financial', 'general motors', 'gm corp', 'gmfinancial', 'gm payroll', 'gm direct', 'gm auto'];
+// ════════════════════════════════════════════════
+// PLAID STATE
+// ════════════════════════════════════════════════
+let plaidData = null; // populated after /api/data
 
-// BoA account identifiers — we look for accounts whose institution includes "bank of america" or name matches
-function isBoAAccount(account) {
-  const inst = (account.institution || '').toLowerCase();
-  const name = (account.name || '').toLowerCase();
-  return inst.includes('bank of america') || inst.includes('bofa') || inst.includes('boa') ||
-         name.includes('bank of america') || name.includes('bofa');
+// ════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════
+const fmt = (n) => n == null ? '—' : '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const due = new Date(dateStr);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.round((due - now) / (1000 * 60 * 60 * 24));
 }
 
-// ═══════════════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', async () => {
-  setGreeting();
-  loadPaidState();
-  budgetData = JSON.parse(JSON.stringify(STATIC_BUDGET)); // deep copy
-  renderAll();
-  loadUser();
-  await loadPlaidData();
-});
-
-function setGreeting() {
-  const h = new Date().getHours();
-  const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  document.getElementById('greeting').textContent = greet;
-  document.getElementById('topDate').textContent = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-  });
+function dueDateStatus(dateStr) {
+  const d = daysUntil(dateStr);
+  if (d === null) return { label: '—', cls: '' };
+  if (d < 0) return { label: 'Overdue', cls: 'overdue' };
+  if (d === 0) return { label: 'Due today', cls: 'due-soon' };
+  if (d <= 7) return { label: `${d}d left`, cls: 'due-soon' };
+  return { label: formatDate(dateStr), cls: 'ok' };
 }
 
-function loadUser() {
-  const u = {
-    name: 'Brad & Beza',
-    firstName: 'Brad',
-    email: 'blutz.518@gmail.com',
-    photo: null
-  };
-
-  document.getElementById('userName').textContent  = u.name || u.email;
-  document.getElementById('userEmail').textContent = u.email;
-  const g = document.getElementById('greeting');
-  g.textContent = g.textContent + ', ' + (u.firstName || u.name.split(' ')[0]) + ' ✦';
-
-  if (u.photo) {
-    document.getElementById('userAvatar').innerHTML = `<img src="${u.photo}" alt="${u.name}">`;
-  } else {
-    const initials = (u.name || 'BB').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    document.getElementById('userInitials').textContent = initials;
-  }
-}
-
-// ═══════════════════════════════════════════════
-//  PLAID DATA LOAD
-// ═══════════════════════════════════════════════
-async function loadPlaidData() {
-  try {
-    // --- Accounts / Balances ---
-    const balRes  = await fetch('/api/plaid/balances');
-    const balData = await balRes.json();
-
-    if (balData.accounts && balData.accounts.length > 0) {
-      plaidAccounts = balData.accounts;
-      mergePlaidCardBalances();
-      renderPlaidAccounts(plaidAccounts);
-    }
-
-    // --- Transactions ---
-    const txnRes  = await fetch('/api/plaid/transactions');
-    const txnData = await txnRes.json();
-
-    if (txnData.transactions && txnData.transactions.length > 0) {
-      plaidTransactions = txnData.transactions;
-      renderTransactions(plaidTransactions);
-      parseBoAIncome(plaidTransactions);
-    }
-
-    renderAll();
-  } catch (err) {
-    console.error('Plaid fetch error:', err);
-    showToast('⚠ Could not load live bank data');
-  }
-}
-
-// ═══════════════════════════════════════════════
-//  CARD BALANCE MERGE
-//  Priority: 1) exact mask match  2) keyword match against Plaid account name
-//  If neither hits, card.plaidConnected stays false → shows as "Not Connected"
-// ═══════════════════════════════════════════════
-function mergePlaidCardBalances() {
-  // Only look at credit/loan accounts, not checking/savings
-  const creditAccounts = plaidAccounts.filter(a => {
-    const t = (a.type || '').toLowerCase();
-    const s = (a.subtype || '').toLowerCase();
-    return t === 'credit' || s === 'credit card' || t === 'loan';
-  });
-
-  budgetData.cards.forEach(card => {
-    card.plaidConnected = false;
-    card.balance        = null;
-    card.nextStatement  = null;
-
-    if (!creditAccounts.length) return;
-
-    let match = null;
-
-    // 1) Exact mask match (most reliable)
-    if (card.plaidMask) {
-      match = creditAccounts.find(a => String(a.mask) === String(card.plaidMask));
-    }
-
-    // 2) Keyword match against Plaid account name
-    if (!match && card.plaidKeywords && card.plaidKeywords.length) {
-      match = creditAccounts.find(a => {
-        const an = (a.name || a.official_name || '').toLowerCase();
-        return card.plaidKeywords.some(kw => an.includes(kw));
-      });
-    }
-
-    if (match) {
-      // Plaid returns current_balance; for credit cards available = credit_limit - current
-      card.balance        = match.balance ?? match.current_balance ?? null;
-      card.nextStatement  = card.balance; // best proxy; Plaid doesn't expose next_statement_balance
-      card.limit          = match.limit   ?? match.credit_limit ?? null;
-      card.plaidConnected = true;
-      card.plaidAccountId = match.account_id || match.id;
-    }
-  });
-}
-
-// ═══════════════════════════════════════════════
-//  BOA INCOME PARSING
-//  Scan BoA checking/savings transactions for deposits (amount < 0 in Plaid = credit).
-//  GM keywords → Brad. Everything else → Beza.
-// ═══════════════════════════════════════════════
-function parseBoAIncome(transactions) {
-  // Identify BoA accounts
-  const boaAccountIds = plaidAccounts
-    .filter(isBoAAccount)
-    .map(a => a.account_id || a.id);
-
-  // Filter for credits (Plaid: negative amount = deposit/credit) from BoA accounts
-  const deposits = transactions.filter(t => {
-    const inBoA = !boaAccountIds.length || boaAccountIds.includes(t.account_id);
-    return inBoA && t.amount < 0; // negative = money coming IN
-  });
-
-  const now      = new Date();
-  const thisMonth = now.getMonth();
-  const thisYear  = now.getFullYear();
-
-  // Only this month's deposits for the income summary
-  const thisMonthDeposits = deposits.filter(t => {
-    const d = new Date(t.date + 'T00:00:00');
-    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-  });
-
-  const bradDeposits = thisMonthDeposits.filter(t => isGMDeposit(t));
-  const bezaDeposits = thisMonthDeposits.filter(t => !isGMDeposit(t));
-
-  const bradTotal = bradDeposits.reduce((s, t) => s + Math.abs(t.amount), 0);
-  const bezaTotal = bezaDeposits.reduce((s, t) => s + Math.abs(t.amount), 0);
-
-  // Build income array with live Plaid data
-  if (deposits.length > 0) {
-    budgetData.income = [
-      {
-        source:   'Brad — GM',
-        amount:   bradTotal || STATIC_BUDGET.income[0].amount,
-        type:     'Bank of America (Live)',
-        person:   'brad',
-        static:   bradTotal === 0,
-        deposits: bradDeposits
-      },
-      {
-        source:   'Beza — Other Deposits',
-        amount:   bezaTotal || STATIC_BUDGET.income[1].amount,
-        type:     'Bank of America (Live)',
-        person:   'beza',
-        static:   bezaTotal === 0,
-        deposits: bezaDeposits
-      }
-    ];
-  } else {
-    // No BoA transactions found — keep static but mark as such
-    budgetData.income = STATIC_BUDGET.income.map(i => ({ ...i, deposits: [] }));
-  }
-
-  renderIncome();
-  renderStats();
-  renderCharts();
-}
-
-function isGMDeposit(txn) {
-  const name = (txn.name || txn.merchant_name || '').toLowerCase();
-  return GM_KEYWORDS.some(k => name.includes(k));
-}
-
-// ═══════════════════════════════════════════════
-//  RENDER ALL
-// ═══════════════════════════════════════════════
-function renderAll() {
-  if (!budgetData) return;
-  renderStats();
-  renderCharts();
-  renderUpcoming();
-  renderCards();
-  renderMonthly();
-  renderYearly();
-  renderIncome();
-}
-
-// ── STATS ──
-function renderStats() {
-  const { income, monthlyExpenses, cards } = budgetData;
-
-  const totalIncome   = income.reduce((s, i) => s + i.amount, 0);
-  const totalExpenses = monthlyExpenses.reduce((s, e) => s + e.amount, 0);
-  const net = totalIncome - totalExpenses;
-
-  document.getElementById('statIncome').textContent   = fmt(totalIncome);
-  document.getElementById('statExpenses').textContent = fmt(totalExpenses);
-  document.getElementById('statNet').textContent      = fmt(net);
-  document.getElementById('statNet').className        = 'stat-value ' + (net >= 0 ? 'gold' : 'red');
-  document.getElementById('expenseCount').textContent = monthlyExpenses.length + ' items';
-
-  // Total debt: only from cards that have a Plaid balance; static cards contribute their static value
-  const connectedDebt   = cards.filter(c => c.plaidConnected).reduce((s, c) => s + (c.balance || 0), 0);
-  const connectedCount  = cards.filter(c => c.plaidConnected).length;
-  document.getElementById('statDebt').textContent     = connectedDebt > 0 ? fmt(connectedDebt) : '—';
-  document.getElementById('statDebtMeta').innerHTML   =
-    connectedCount > 0
-      ? `<span class="badge red">${connectedCount} connected</span>`
-      : `<span class="badge grey">No cards linked</span>`;
-}
-
-// ── CHARTS ──
-function renderCharts() {
-  const { monthlyExpenses, income } = budgetData;
-
-  const groups = {};
-  monthlyExpenses.forEach(e => {
-    const cat = simplifyType(e.category);
-    groups[cat] = (groups[cat] || 0) + e.amount;
-  });
-
-  const labels = Object.keys(groups);
-  const values = Object.values(groups);
-  const palette = ['#c9a84c','#e8c97a','#a07830','#60a5fa','#818cf8','#4ade80','#f87171','#fb923c','#a78bfa','#34d399'];
-
-  if (charts.spending) charts.spending.destroy();
-  charts.spending = new Chart(document.getElementById('spendingChart'), {
-    type: 'doughnut',
-    data: {
-      labels,
-      datasets: [{ data: values, backgroundColor: palette, borderWidth: 0, hoverOffset: 6 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false, cutout: '68%',
-      plugins: {
-        legend: { position: 'right', labels: { color: 'rgba(26,21,16,0.55)', font: { size: 11 }, boxWidth: 10, padding: 12 } },
-        tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)}` }, backgroundColor: '#1a1510', titleColor: '#f5f0e8', bodyColor: '#e8c97a', borderColor: 'rgba(201,168,76,0.2)', borderWidth: 1 }
-      }
-    }
-  });
-
-  const totalIncome   = income.reduce((s, i) => s + i.amount, 0);
-  const totalExpenses = monthlyExpenses.reduce((s, e) => s + e.amount, 0);
-
-  if (charts.income) charts.income.destroy();
-  charts.income = new Chart(document.getElementById('incomeChart'), {
-    type: 'bar',
-    data: {
-      labels: ['Income', 'Expenses', 'Remaining'],
-      datasets: [{
-        data: [totalIncome, totalExpenses, totalIncome - totalExpenses],
-        backgroundColor: ['rgba(74,222,128,0.25)', 'rgba(248,113,113,0.25)', 'rgba(201,168,76,0.25)'],
-        borderColor:     ['#4ade80', '#f87171', '#c9a84c'],
-        borderWidth: 1.5, borderRadius: 6,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)}` }, backgroundColor: '#111827', bodyColor: '#e8c97a', borderColor: 'rgba(201,168,76,0.2)', borderWidth: 1 }
-      },
-      scales: {
-        x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: 'rgba(26,21,16,0.5)', font: { size: 11 } } },
-        y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: 'rgba(26,21,16,0.5)', font: { size: 11 }, callback: v => '$' + (v/1000).toFixed(0) + 'k' }, border: { display: false } }
-      }
-    }
-  });
-}
-
-// ── UPCOMING ──
-function renderUpcoming() {
-  const { monthlyExpenses, cards } = budgetData;
-  const todayDay = new Date().getDate();
-
-  const items = [];
-  monthlyExpenses.forEach(e => {
-    const day = parseInt(e.dueDate);
-    if (!isNaN(day)) items.push({ name: e.category, amount: e.amount, day, type: e.type, kind: 'expense' });
-  });
-  cards.forEach(c => {
-    if (c.dueDate) {
-      const d   = new Date(c.dueDate);
-      const day = d.getDate();
-      const amt = c.plaidConnected ? c.balance : null;
-      items.push({ name: c.name, amount: amt, day, type: 'Credit Card', kind: 'card', fullDate: c.dueDate, connected: c.plaidConnected });
-    }
-  });
-
-  items.sort((a, b) => ((a.day - todayDay + 31) % 31) - ((b.day - todayDay + 31) % 31));
-  const upcoming = items.slice(0, 12);
-  document.getElementById('upcomingCount').textContent = upcoming.length + ' upcoming';
-
-  const tbody = document.getElementById('upcomingBody');
-  tbody.innerHTML = '';
-
-  upcoming.forEach(item => {
-    const key      = item.name + '_' + item.day;
-    const daysUntil = (item.day - todayDay + 31) % 31;
-    const isPaid   = paidState[key] || false;
-    const urgency  = daysUntil <= 3 ? 'color:var(--red)' : daysUntil <= 7 ? 'color:var(--gold)' : '';
-
-    const amtDisplay = item.amount != null ? fmt(item.amount) : '<span style="color:var(--cream-faint);font-style:italic">not linked</span>';
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="name">${item.name}</td>
-      <td><span style="font-size:11px;color:var(--cream-faint);">${item.type}</span></td>
-      <td class="due" style="${urgency}">${item.fullDate || ordinal(item.day)} ${daysUntil === 0 ? '· Today!' : daysUntil === 1 ? '· Tomorrow' : '· ' + daysUntil + 'd'}</td>
-      <td class="amount">${amtDisplay}</td>
-      <td>
-        <span class="paid-pill ${isPaid ? 'paid' : 'unpaid'}" onclick="togglePaid('${key}', this)">
-          ${isPaid ? '✓ Paid' : '○ Unpaid'}
-        </span>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-// ── CREDIT CARDS ──
-// Key rule: if card.plaidConnected is false/null → show as disconnected (no balance).
-function renderCards() {
-  const { cards } = budgetData;
-  const grid = document.getElementById('cardsGrid');
-  grid.innerHTML = '';
-
-  let totalConnectedDue = 0;
-
-  cards.forEach(c => {
-    const connected  = c.plaidConnected;
-    const dueDate    = c.dueDate ? new Date(c.dueDate) : null;
-    const daysUntil  = dueDate ? Math.ceil((dueDate - new Date()) / 86400000) : 99;
-    const soonClass  = connected && daysUntil <= 5 ? 'cc-due-soon' : '';
-    const disClass   = connected ? '' : 'disconnected';
-
-    if (connected && c.balance) totalConnectedDue += c.balance;
-
-    const div = document.createElement('div');
-    div.className = `credit-card ${soonClass} ${disClass}`;
-
-    if (connected) {
-      const util = c.limit ? (c.balance / c.limit * 100) : 0;
-      div.innerHTML = `
-        <div class="cc-name">${c.name}</div>
-        <div style="margin-bottom:8px;"><span class="plaid-live">Live balance</span></div>
-        <div class="cc-balance">${fmt(c.balance)}</div>
-        <div class="cc-row">
-          <span class="cc-key">Statement Balance</span>
-          <span class="cc-val">${fmt(c.nextStatement)}</span>
-        </div>
-        <div class="cc-row">
-          <span class="cc-key">Due Date</span>
-          <span class="cc-val" style="${daysUntil <= 5 ? 'color:var(--red)' : 'color:var(--gold)'}">${c.dueDate || '—'}${daysUntil <= 5 ? ' ⚠' : ''}</span>
-        </div>
-        ${c.limit ? `
-        <div class="progress-bar">
-          <div class="progress-fill ${util > 30 ? 'over' : ''}" style="width:${Math.min(util,100)}%"></div>
-        </div>` : ''}
-        <div class="cc-use">${c.useCase}</div>
-      `;
-    } else {
-      // No Plaid connection — show card stub with no balance
-      div.innerHTML = `
-        <div class="cc-name">${c.name}</div>
-        <div class="cc-balance no-data">Balance unavailable</div>
-        <div class="cc-row">
-          <span class="cc-key">Due Date</span>
-          <span class="cc-val" style="color:var(--cream-faint)">${c.dueDate || '—'}</span>
-        </div>
-        <div class="cc-use">${c.useCase}</div>
-      `;
-    }
-
-    grid.appendChild(div);
-  });
-
-  const connectedCount = cards.filter(c => c.plaidConnected).length;
-  document.getElementById('totalDueLabel').textContent =
-    connectedCount > 0 ? fmt(totalConnectedDue) + ' due (linked cards)' : 'No cards linked yet';
-}
-
-// ── MONTHLY ──
-function renderMonthly() {
-  const { monthlyExpenses } = budgetData;
-  const tbody = document.getElementById('monthlyBody');
-  tbody.innerHTML = '';
-
-  let total = 0, paidCount = 0, paidAmount = 0;
-
-  monthlyExpenses.forEach(e => {
-    total += e.amount;
-    const key    = 'monthly_' + e.category;
-    const isPaid = paidState[key] || false;
-    if (isPaid) { paidCount++; paidAmount += e.amount; }
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="name">${e.category}</td>
-      <td class="amount">${fmt(e.amount)}</td>
-      <td class="due">${e.dueDate}</td>
-      <td style="font-size:11px;color:var(--cream-faint);">${e.type}</td>
-      <td>
-        <span class="paid-pill ${isPaid ? 'paid' : 'unpaid'}" onclick="togglePaid('monthly_${e.category}', this)">
-          ${isPaid ? '✓ Paid' : '○ Unpaid'}
-        </span>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  const tf = document.createElement('tr');
-  tf.style.cssText = 'border-top:1px solid rgba(160,130,60,0.18)';
-  tf.innerHTML = `
-    <td class="name" style="color:var(--gold)">Total</td>
-    <td class="amount" style="color:var(--gold)">${fmt(total)}</td>
-    <td></td><td></td><td></td>
-  `;
-  tbody.appendChild(tf);
-
-  document.getElementById('monthlyTotalBadge').textContent = fmt(total) + ' / mo';
-  const pct = Math.round(paidCount / monthlyExpenses.length * 100);
-  document.getElementById('progressLabel').textContent = `${paidCount} / ${monthlyExpenses.length} paid (${fmt(paidAmount)})`;
-  document.getElementById('progressFill').style.width  = pct + '%';
-}
-
-// ── YEARLY ──
-function renderYearly() {
-  const { yearlyExpenses } = budgetData;
-  const tbody = document.getElementById('yearlyBody');
-  tbody.innerHTML = '';
-
-  let total = 0;
-  yearlyExpenses.forEach(e => {
-    total += e.amount;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="name">${e.category}</td>
-      <td class="amount">${fmt(e.amount)}</td>
-      <td class="due">${e.dueDate}</td>
-      <td style="color:var(--cream-faint);font-size:12px;">${fmt(e.amount / 12)}/mo</td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  document.getElementById('yearlyTotalBadge').textContent = fmt(total) + ' / yr';
-}
-
-// ── INCOME ──
-// Shows Brad (GM deposits) and Beza (all other BoA deposits) with live transaction drill-down.
-function renderIncome() {
-  const { income, monthlyExpenses } = budgetData;
-  const container = document.getElementById('incomeCards');
-  container.innerHTML = '';
-
-  let hasLive = income.some(i => !i.static && i.deposits && i.deposits.length > 0);
-  document.getElementById('incomeLiveBadge').textContent = hasLive ? 'Live from BoA' : 'Static estimates';
-  document.getElementById('incomeLiveBadge').className   = 'badge ' + (hasLive ? 'green' : 'gold');
-
-  income.forEach(inc => {
-    const isLive     = !inc.static && inc.deposits && inc.deposits.length > 0;
-    const depositsHtml = isLive
-      ? `<div class="income-deposits">
-           ${inc.deposits.map(d => `
-             <div class="income-deposit-item">
-               <span class="income-deposit-name">${d.name}</span>
-               <span class="income-deposit-date">${formatDate(d.date)}</span>
-               <span class="income-deposit-amt">+${fmt(Math.abs(d.amount))}</span>
-             </div>`).join('')}
-         </div>`
-      : `<p class="income-placeholder">Connect Bank of America to see live deposits</p>`;
-
-    const div = document.createElement('div');
-    div.className = 'income-card';
-    div.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-        <div class="income-label">${inc.person === 'brad' ? 'Brad' : 'Beza'}</div>
-        ${isLive ? '<span class="plaid-live">Live</span>' : '<span class="badge grey">Estimated</span>'}
-      </div>
-      <div class="income-source">${inc.source}</div>
-      <div class="income-amount">${fmt(inc.amount)}</div>
-      <div class="income-type">${inc.type} · ${isLive ? 'this month' : 'monthly estimate'}</div>
-      ${depositsHtml}
-    `;
-    container.appendChild(div);
-  });
-
-  // Summary chart
-  const totalIncome   = income.reduce((s, i) => s + i.amount, 0);
-  const totalExpenses = monthlyExpenses.reduce((s, e) => s + e.amount, 0);
-
-  if (charts.summary) charts.summary.destroy();
-  charts.summary = new Chart(document.getElementById('summaryChart'), {
-    type: 'bar',
-    data: {
-      labels: income.map(i => i.source.split(' — ')[0]),
-      datasets: [
-        {
-          label: 'Monthly Income',
-          data: income.map(i => i.amount),
-          backgroundColor: 'rgba(74,222,128,0.2)',
-          borderColor: '#4ade80',
-          borderWidth: 1.5, borderRadius: 6,
-        },
-        {
-          label: 'Monthly Expenses',
-          data: [totalExpenses, 0],
-          backgroundColor: 'rgba(248,113,113,0.2)',
-          borderColor: '#f87171',
-          borderWidth: 1.5, borderRadius: 6,
-        }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { color: 'rgba(26,21,16,0.5)', font: { size: 11 } } },
-        tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)}` }, backgroundColor: '#1a1510', bodyColor: '#e8c97a', borderColor: 'rgba(201,168,76,0.2)', borderWidth: 1 }
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: 'rgba(26,21,16,0.5)' } },
-        y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: 'rgba(26,21,16,0.5)', callback: v => '$' + (v/1000).toFixed(0) + 'k' }, border: { display: false } }
-      }
-    }
-  });
-}
-
-// ── PLAID ACCOUNTS TABLE ──
-function renderPlaidAccounts(accounts) {
-  const panel = document.getElementById('plaidAccountsPanel');
-  panel.innerHTML = '';
-
-  if (!accounts.length) {
-    panel.innerHTML = `<div class="empty-state">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-      <h3>No banks connected</h3><p>Connect your accounts via Plaid to see live balances</p>
-    </div>`;
-    return;
-  }
-
-  const table = document.createElement('table');
-  table.className = 'data-table';
-  table.innerHTML = `
-    <thead><tr>
-      <th>Account</th><th>Institution</th><th>Type</th>
-      <th>Available</th><th>Balance</th>
-    </tr></thead>
-    <tbody>
-      ${accounts.map(a => `
-        <tr>
-          <td class="name">${a.name} ···${a.mask || ''}</td>
-          <td style="font-size:11px;color:var(--cream-faint)">${a.institution || '—'}</td>
-          <td><span class="badge gold">${a.subtype || a.type}</span></td>
-          <td class="amount">${a.available != null ? fmt(a.available) : '—'}</td>
-          <td class="amount">${fmt(a.balance)}</td>
-        </tr>`).join('')}
-    </tbody>
-  `;
-  panel.appendChild(table);
-}
-
-// ── TRANSACTIONS ──
-function renderTransactions(transactions) {
-  const list = document.getElementById('txnList');
-  const categoryEmojis = {
-    'Food and Drink': '🍽', 'Shops': '🛍', 'Travel': '✈️', 'Auto': '🚗',
-    'Healthcare': '💊', 'Service': '⚙️', 'Recreation': '🎮', 'Transfer': '↔️',
-    'Payment': '💳', 'Bank Fees': '🏦', default: '💰'
-  };
-
-  list.innerHTML = '';
-  document.getElementById('txnCount').textContent = transactions.length + ' transactions';
-
-  transactions.forEach(t => {
-    const cat    = t.category ? t.category[0] : 'default';
-    const emoji  = categoryEmojis[cat] || categoryEmojis.default;
-    const isDebit = t.amount > 0;
-
-    const div = document.createElement('div');
-    div.className = 'txn-item';
-    div.innerHTML = `
-      <div class="txn-icon">${emoji}</div>
-      <div class="txn-info">
-        <div class="txn-name">${t.name}</div>
-        <div class="txn-cat">${t.category ? t.category.join(' › ') : 'Uncategorized'}</div>
-      </div>
-      <div class="txn-date">${formatDate(t.date)}</div>
-      <div class="txn-amt ${isDebit ? 'debit' : 'credit'}">${isDebit ? '−' : '+'} ${fmt(Math.abs(t.amount))}</div>
-    `;
-    list.appendChild(div);
-  });
-}
-
-// ═══════════════════════════════════════════════
-//  PLAID CONNECT
-// ═══════════════════════════════════════════════
-async function connectPlaid() {
-  try {
-    const res          = await fetch('/api/plaid/create-link-token', { method: 'POST' });
-    const { link_token } = await res.json();
-
-    plaidHandler = Plaid.create({
-      token: link_token,
-      onSuccess: async (public_token, meta) => {
-        const exRes = await fetch('/api/plaid/exchange-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ public_token, institution_name: meta.institution?.name })
-        });
-        const data = await exRes.json();
-        if (data.success) {
-          showToast('✓ ' + (data.institution || 'Account') + ' connected');
-          await loadPlaidData();
-        }
-      },
-      onExit: (err) => { if (err) console.error(err); },
-    });
-    plaidHandler.open();
-  } catch (e) {
-    showToast('⚠ Could not initiate Plaid connection');
-    console.error(e);
-  }
-}
-
-// ═══════════════════════════════════════════════
-//  PAID STATE
-// ═══════════════════════════════════════════════
-function loadPaidState() {
-  try { const s = sessionStorage.getItem('bb_paid'); if (s) paidState = JSON.parse(s); } catch(e) {}
-}
-function savePaidState() {
-  try { sessionStorage.setItem('bb_paid', JSON.stringify(paidState)); } catch(e) {}
-}
-
-function togglePaid(key, el) {
-  paidState[key] = !paidState[key];
-  savePaidState();
-  const isPaid  = paidState[key];
-  el.className  = 'paid-pill ' + (isPaid ? 'paid' : 'unpaid');
-  el.textContent = isPaid ? '✓ Paid' : '○ Unpaid';
-
-  if (document.getElementById('view-monthly').classList.contains('active')) {
-    const { monthlyExpenses } = budgetData;
-    let paidCount = 0, paidAmount = 0;
-    monthlyExpenses.forEach(e => {
-      if (paidState['monthly_' + e.category]) { paidCount++; paidAmount += e.amount; }
-    });
-    const pct = Math.round(paidCount / monthlyExpenses.length * 100);
-    document.getElementById('progressLabel').textContent = `${paidCount} / ${monthlyExpenses.length} paid (${fmt(paidAmount)})`;
-    document.getElementById('progressFill').style.width  = pct + '%';
-  }
-}
-
-// ═══════════════════════════════════════════════
-//  NAVIGATION
-// ═══════════════════════════════════════════════
-function switchView(id, el) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('view-' + id).classList.add('active');
-  el.classList.add('active');
-}
-
-// ═══════════════════════════════════════════════
-//  REFRESH
-// ═══════════════════════════════════════════════
-async function refreshData() {
-  const btn = document.getElementById('refreshBtn');
-  btn.classList.add('spinning');
-  await loadPlaidData();
-  btn.classList.remove('spinning');
-  showToast('✓ Data refreshed');
-}
-
-// ═══════════════════════════════════════════════
-//  UTILS
-// ═══════════════════════════════════════════════
-function fmt(n) {
-  if (n == null) return '—';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
-}
-
-function formatDate(d) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function ordinal(n) {
-  const s = ['th','st','nd','rd'], v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
-
-function simplifyType(cat) {
-  const m = {
-    'Rent': 'Housing', 'Utilities': 'Housing', 'Internet': 'Housing',
-    'Tesla': 'Auto', 'Truck': 'Auto', 'TxTag': 'Auto',
-    'T-Mobile': 'Phone', 'iPhone': 'Phone', 'Apple Watch': 'Phone',
-    'Student Loan': 'Loans', 'aidVantage': 'Loans',
-    'F45': 'Health', 'Lemonade Insurance': 'Insurance',
-    'Tithe/Offering': 'Giving',
-    'Ringy': 'Business', 'Car Wash (Brad)': 'Car Wash', 'Car Wash (Beza)': 'Car Wash',
-    'Lashes': 'Personal',
-  };
-  return m[cat] || 'Other';
+function formatDate(str) {
+  if (!str) return '—';
+  const d = new Date(str);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function showToast(msg) {
@@ -1764,6 +667,539 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning,';
+  if (h < 17) return 'Good afternoon,';
+  return 'Good evening,';
+}
+
+// ════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('greeting').textContent = getGreeting();
+  document.getElementById('topDate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  renderMonthly();
+  renderYearly();
+  renderStaticIncome();
+  renderCharts();
+  refreshData();
+});
+
+// ════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════
+function switchView(view, el) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  el.classList.add('active');
+}
+
+// ════════════════════════════════════════════════
+// PLAID CONNECT
+// ════════════════════════════════════════════════
+async function connectPlaid() {
+  try {
+    const res = await fetch('/api/plaid/create-link-token', { method: 'POST' });
+    const { link_token, error } = await res.json();
+    if (error) { showToast('Error: ' + error); return; }
+
+    const handler = Plaid.create({
+      token: link_token,
+      onSuccess: async (public_token, metadata) => {
+        showToast('Linking account…');
+        const ex = await fetch('/api/plaid/exchange-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ public_token }),
+        });
+        const data = await ex.json();
+        if (data.success) {
+          showToast(`✓ Connected ${metadata.institution.name}`);
+          await refreshData();
+        } else {
+          showToast('Link failed: ' + (data.error || 'unknown error'));
+        }
+      },
+      onExit: (err) => { if (err) showToast('Link exited: ' + err.display_message); },
+    });
+    handler.open();
+  } catch (e) {
+    showToast('Could not open Plaid: ' + e.message);
+  }
+}
+
+// ════════════════════════════════════════════════
+// REFRESH DATA FROM SERVER
+// ════════════════════════════════════════════════
+async function refreshData() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  try {
+    const res = await fetch('/api/data');
+    plaidData = await res.json();
+    renderPlaidData();
+  } catch (e) {
+    console.warn('Could not fetch /api/data:', e.message);
+  } finally {
+    btn.classList.remove('spinning');
+  }
+}
+
+// ════════════════════════════════════════════════
+// RENDER PLAID DATA
+// ════════════════════════════════════════════════
+function renderPlaidData() {
+  if (!plaidData || !plaidData.linked) {
+    document.getElementById('linkedStatus').textContent = 'No accounts linked';
+    return;
+  }
+
+  const { accounts, creditCards, income, totalDebt } = plaidData;
+  const count = accounts.length;
+  document.getElementById('linkedStatus').textContent = `${count} account${count !== 1 ? 's' : ''} linked`;
+
+  // ── Dashboard stat cards ──
+  if (income) {
+    const bal = income.available_balance ?? income.current_balance;
+    document.getElementById('statIncome').textContent = fmt(bal);
+    const monthlyTotal = MONTHLY_EXPENSES.reduce((s, e) => s + e.amount, 0);
+    const net = bal - monthlyTotal;
+    document.getElementById('statNet').textContent = fmt(net > 0 ? net : null);
+    document.getElementById('statNet').className = 'stat-value ' + (net >= 0 ? 'gold' : 'red');
+  }
+
+  if (totalDebt != null) {
+    document.getElementById('statDebt').textContent = fmt(totalDebt);
+    document.getElementById('cardCount').textContent = `${creditCards.length} card${creditCards.length !== 1 ? 's' : ''}`;
+  }
+
+  // ── Credit cards view ──
+  renderCreditCards(creditCards);
+  renderConnectedAccounts(accounts);
+
+  // ── Income view ──
+  renderPlaidIncome(income);
+
+  // ── Upcoming dues ──
+  renderUpcomingDues(creditCards);
+}
+
+// ════════════════════════════════════════════════
+// CREDIT CARDS
+// ════════════════════════════════════════════════
+function renderCreditCards(cards) {
+  const grid = document.getElementById('cardsGrid');
+
+  if (!cards || cards.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      <h3>No credit cards linked</h3>
+      <p>Connect your bank via Plaid to see live balances and due dates</p>
+    </div>`;
+    document.getElementById('totalDueLabel').textContent = '—';
+    return;
+  }
+
+  const total = cards.reduce((s, c) => s + (c.current_balance || 0), 0);
+  document.getElementById('totalDueLabel').textContent = fmt(total) + ' total owed';
+
+  grid.innerHTML = cards.map(card => {
+    const pct = card.credit_limit ? Math.min((card.current_balance / card.credit_limit) * 100, 100) : 0;
+    const fillCls = pct >= 90 ? 'over' : pct >= 70 ? 'warn' : '';
+    const status = dueDateStatus(card.due_date);
+    const overdueCls = card.is_overdue ? 'overdue' : '';
+    const cardName = card.official_name || card.name || 'Credit Card';
+    const shortName = cardName.length > 38 ? cardName.slice(0, 36) + '…' : cardName;
+
+    let badgeHtml = '';
+    if (card.is_overdue) {
+      badgeHtml = '<span class="cc-badge overdue-badge">⚠ Overdue</span>';
+    } else if (status.cls === 'due-soon') {
+      badgeHtml = `<span class="cc-badge soon-badge">Due soon</span>`;
+    } else if (card.due_date) {
+      badgeHtml = `<span class="cc-badge ok-badge">On track</span>`;
+    }
+
+    return `<div class="credit-card ${overdueCls}">
+      <div class="cc-bank">${card.institution || 'Bank'} ···${card.mask || '????'}</div>
+      <div class="cc-name" title="${cardName}">${shortName}</div>
+      <div class="cc-balance">${fmt(card.current_balance)}</div>
+      ${badgeHtml}
+      <div class="cc-divider"></div>
+      <div class="cc-row">
+        <span class="cc-key">Statement Balance</span>
+        <span class="cc-val">${fmt(card.last_statement_balance)}</span>
+      </div>
+      <div class="cc-row">
+        <span class="cc-key">Min. Payment</span>
+        <span class="cc-val">${fmt(card.minimum_payment)}</span>
+      </div>
+      <div class="cc-row">
+        <span class="cc-key">Payment Due</span>
+        <span class="cc-val ${status.cls}">${card.due_date ? formatDate(card.due_date) : '—'}${status.cls === 'due-soon' || status.cls === 'overdue' ? ' · ' + status.label : ''}</span>
+      </div>
+      <div class="cc-row">
+        <span class="cc-key">Last Payment</span>
+        <span class="cc-val">${card.last_payment_amount ? fmt(card.last_payment_amount) + ' · ' + formatDate(card.last_payment_date) : '—'}</span>
+      </div>
+      ${card.credit_limit ? `
+      <div class="cc-util-bar">
+        <div class="cc-util-label">
+          <span>Utilization</span>
+          <span>${pct.toFixed(0)}%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill ${fillCls}" style="width:${pct}%"></div></div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════
+// CONNECTED ACCOUNTS LIST
+// ════════════════════════════════════════════════
+const ROLE_CONFIG = {
+  income:      { icon: '🏦', badge: 'role-income', label: 'Income Source' },
+  boa_credit:  { icon: '💳', badge: 'role-boa',    label: 'BoA Credit Card' },
+  credit_card: { icon: '💳', badge: 'role-credit',  label: 'Credit Card' },
+  bank:        { icon: '🏦', badge: 'role-bank',    label: 'Bank Account' },
+  other:       { icon: '💼', badge: 'role-other',   label: 'Account' },
+};
+
+function renderConnectedAccounts(accounts) {
+  const el = document.getElementById('connectedAccountsBody');
+  if (!accounts || accounts.length === 0) {
+    el.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><h3>No banks connected</h3><p>Connect your accounts via Plaid to see live balances</p></div>`;
+    return;
+  }
+
+  el.innerHTML = accounts.map(a => {
+    const cfg = ROLE_CONFIG[a.role] || ROLE_CONFIG.other;
+    const bal = a.balances?.available ?? a.balances?.current;
+    return `<div class="account-row">
+      <div class="account-icon">${cfg.icon}</div>
+      <div class="account-info">
+        <div class="account-name">${a.label || a.name}</div>
+        <div class="account-sub">${a.institution} · ···${a.mask}</div>
+      </div>
+      <span class="account-role-badge ${cfg.badge}">${cfg.label}</span>
+      <div class="account-balance">${fmt(bal)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════
+// UPCOMING DUES (dashboard)
+// ════════════════════════════════════════════════
+function renderUpcomingDues(creditCards) {
+  const tbody = document.getElementById('upcomingBody');
+  const rows = [];
+
+  // Add credit card dues
+  if (creditCards) {
+    for (const c of creditCards) {
+      if (!c.due_date) continue;
+      const d = daysUntil(c.due_date);
+      if (d !== null && d <= 30) {
+        const status = dueDateStatus(c.due_date);
+        rows.push({
+          name: (c.official_name || c.name || 'Credit Card').slice(0, 30),
+          type: 'Credit Card',
+          due: formatDate(c.due_date),
+          amount: c.minimum_payment || c.last_statement_balance,
+          statusHtml: `<span class="badge ${status.cls === 'overdue' ? 'red' : status.cls === 'due-soon' ? 'red' : 'green'}">${status.label}</span>`,
+          daysUntil: d,
+        });
+      }
+    }
+  }
+
+  // Sort by days
+  rows.sort((a, b) => a.daysUntil - b.daysUntil);
+  document.getElementById('upcomingCount').textContent = rows.length + ' upcoming';
+
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--cream-faint);padding:30px;">No upcoming dues in the next 30 days</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td class="name">${r.name}</td>
+    <td>${r.type}</td>
+    <td class="due">${r.due}</td>
+    <td class="amount">${fmt(r.amount)}</td>
+    <td>${r.statusHtml}</td>
+  </tr>`).join('');
+}
+
+// ════════════════════════════════════════════════
+// INCOME VIEW — Plaid section
+// ════════════════════════════════════════════════
+function renderPlaidIncome(income) {
+  const el = document.getElementById('plaidIncomeSection');
+  if (!income) { el.innerHTML = ''; return; }
+
+  const thisMonthFmt = income.this_month_total ? fmt(income.this_month_total) : '—';
+  const prevMonthFmt = income.prev_month_total ? fmt(income.prev_month_total) : '—';
+
+  el.innerHTML = `<div class="panel" style="margin-bottom:0;">
+    <div class="panel-head">
+      <span class="panel-title">Live Balance — ${income.label}</span>
+      <span class="badge green">Plaid Live</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;padding:0;">
+      <div style="padding:18px 22px;border-right:1px solid var(--border);">
+        <div class="stat-label">Available Balance</div>
+        <div class="stat-value green" style="font-size:22px;">${fmt(income.available_balance)}</div>
+        <div class="stat-meta">Ready to use</div>
+      </div>
+      <div style="padding:18px 22px;border-right:1px solid var(--border);">
+        <div class="stat-label">Current Balance</div>
+        <div class="stat-value" style="font-size:22px;">${fmt(income.current_balance)}</div>
+        <div class="stat-meta">Incl. pending</div>
+      </div>
+      <div style="padding:18px 22px;border-right:1px solid var(--border);">
+        <div class="stat-label">Income This Month</div>
+        <div class="stat-value green" style="font-size:22px;">${thisMonthFmt}</div>
+        <div class="stat-meta">EFT · ACH · Commission</div>
+      </div>
+      <div style="padding:18px 22px;">
+        <div class="stat-label">Income Last Month</div>
+        <div class="stat-value gold" style="font-size:22px;">${prevMonthFmt}</div>
+        <div class="stat-meta">${income.institution}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // Pre-populate transaction tables from the data already in income object
+  if (income.this_month_transactions) renderIncomeTxnTable('thisMonthIncomeTxns', income.this_month_transactions, true);
+  if (income.recent_transactions) {
+    renderIncomeTxnTable('allIncomeTxns', income.recent_transactions, false);
+    renderIncomeTypeBreakdown(income.recent_transactions);
+    if (income.this_month_total) document.getElementById('thisMonthIncomeTotal').textContent = fmt(income.this_month_total) + ' this month';
+    const allTotal = income.recent_transactions.reduce((s, t) => s + t.amount, 0);
+    document.getElementById('allIncomeTotal').textContent = fmt(allTotal) + ' (90 days)';
+  }
+}
+
+// ════════════════════════════════════════════════
+// INCOME TRANSACTION RENDERING
+// ════════════════════════════════════════════════
+
+const TYPE_BADGE = {
+  'ACH Deposit':    'ach',
+  'EFT Deposit':    'eft',
+  'EFT Credit':     'eft',
+  'Commission':     'commission',
+  'Payroll':        'payroll',
+  'Direct Deposit': 'payroll',
+  'Bonus':          'payroll',
+  'Wire Transfer':  'transfer',
+  'Transfer In':    'transfer',
+  'Income Deposit': '',
+};
+
+function renderIncomeTxnTable(tbodyId, txns, showStatus) {
+  const tbody = document.getElementById(tbodyId);
+  if (!txns || txns.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${showStatus ? 5 : 4}" style="text-align:center;color:var(--cream-faint);padding:24px;">No income deposits found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = txns.map(t => {
+    const badgeCls = TYPE_BADGE[t.income_type] || '';
+    const pendingTag = t.pending ? ' <span style="font-size:9px;color:var(--gold);letter-spacing:1px;">PENDING</span>' : '';
+    const statusCell = showStatus ? `<td><span class="badge ${t.pending ? 'gold' : 'green'}">${t.pending ? 'Pending' : 'Settled'}</span></td>` : '';
+    return `<tr>
+      <td class="due">${formatDate(t.date)}</td>
+      <td class="name">${t.name}${pendingTag}</td>
+      <td><span class="txn-type-badge ${badgeCls}">${t.income_type}</span></td>
+      <td class="amount" style="color:var(--green);">${fmt(t.amount)}</td>
+      ${statusCell}
+    </tr>`;
+  }).join('');
+}
+
+function renderIncomeTypeBreakdown(txns) {
+  const el = document.getElementById('incomeTypeBreakdown');
+  if (!txns || txns.length === 0) { el.innerHTML = ''; return; }
+
+  const byType = {};
+  const countByType = {};
+  for (const t of txns) {
+    byType[t.income_type] = (byType[t.income_type] || 0) + t.amount;
+    countByType[t.income_type] = (countByType[t.income_type] || 0) + 1;
+  }
+
+  const pills = Object.entries(byType)
+    .sort((a, b) => b[1] - a[1])
+    .map(([type, total]) => `
+      <div class="income-type-pill">
+        <div class="itp-label">${type}</div>
+        <div class="itp-amount">${fmt(total)}</div>
+        <div class="itp-count">${countByType[type]} deposit${countByType[type] !== 1 ? 's' : ''} · 90 days</div>
+      </div>`).join('');
+
+  el.innerHTML = `<div class="income-type-pills">${pills}</div>`;
+}
+
+// Full refresh of income transactions (called by Refresh button)
+async function loadIncomeTxns() {
+  try {
+    showToast('Loading income transactions…');
+    const res = await fetch('/api/income-transactions');
+    const data = await res.json();
+    if (!data.linked || !data.transactions) { showToast('No income account linked yet'); return; }
+
+    const now = new Date();
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const thisMonthTxns = data.transactions.filter(t => t.date.startsWith(thisMonth));
+    const allTotal = data.transactions.reduce((s, t) => s + t.amount, 0);
+    const thisTotal = thisMonthTxns.reduce((s, t) => s + t.amount, 0);
+
+    renderIncomeTxnTable('thisMonthIncomeTxns', thisMonthTxns, true);
+    renderIncomeTxnTable('allIncomeTxns', data.transactions, false);
+    renderIncomeTypeBreakdown(data.transactions);
+
+    document.getElementById('thisMonthIncomeTotal').textContent = fmt(thisTotal) + ' this month';
+    document.getElementById('allIncomeTotal').textContent = fmt(allTotal) + ' (90 days)';
+
+    showToast(`✓ ${data.transactions.length} income deposits loaded`);
+  } catch (e) {
+    showToast('Error loading income: ' + e.message);
+  }
+}
+
+// ════════════════════════════════════════════════
+// MONTHLY EXPENSES
+// ════════════════════════════════════════════════
+function renderMonthly() {
+  const tbody = document.getElementById('monthlyBody');
+  const total = MONTHLY_EXPENSES.reduce((s, e) => s + e.amount, 0);
+  document.getElementById('monthlyTotalBadge').textContent = fmt(total);
+  document.getElementById('statExpenses').textContent = fmt(total);
+
+  tbody.innerHTML = MONTHLY_EXPENSES.map((e, i) => {
+    const paidClass = e.paid ? 'paid' : 'unpaid';
+    const paidLabel = e.paid ? '✓ Paid' : 'Unpaid';
+    return `<tr>
+      <td class="name">${e.name}</td>
+      <td class="amount">${fmt(e.amount)}</td>
+      <td class="due">${e.due}</td>
+      <td>${e.type}</td>
+      <td><span class="paid-pill ${paidClass}" onclick="togglePaid(${i}, this)">${paidLabel}</span></td>
+    </tr>`;
+  }).join('');
+
+  updateProgress();
+}
+
+function togglePaid(idx, el) {
+  MONTHLY_EXPENSES[idx].paid = !MONTHLY_EXPENSES[idx].paid;
+  el.className = 'paid-pill ' + (MONTHLY_EXPENSES[idx].paid ? 'paid' : 'unpaid');
+  el.textContent = MONTHLY_EXPENSES[idx].paid ? '✓ Paid' : 'Unpaid';
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = MONTHLY_EXPENSES.length;
+  const paid = MONTHLY_EXPENSES.filter(e => e.paid).length;
+  const pct = total > 0 ? (paid / total) * 100 : 0;
+  document.getElementById('progressLabel').textContent = `${paid} / ${total} paid`;
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+// ════════════════════════════════════════════════
+// YEARLY EXPENSES
+// ════════════════════════════════════════════════
+function renderYearly() {
+  const tbody = document.getElementById('yearlyBody');
+  const total = YEARLY_EXPENSES.reduce((s, e) => s + e.amount, 0);
+  document.getElementById('yearlyTotalBadge').textContent = fmt(total) + '/yr';
+
+  tbody.innerHTML = YEARLY_EXPENSES.map(e => `<tr>
+    <td class="name">${e.name}</td>
+    <td class="amount">${fmt(e.amount)}</td>
+    <td class="due">${e.due}</td>
+    <td class="amount">~${fmt(e.monthly)}/mo</td>
+  </tr>`).join('');
+}
+
+// ════════════════════════════════════════════════
+// STATIC INCOME CARDS
+// ════════════════════════════════════════════════
+function renderStaticIncome() {
+  const container = document.getElementById('incomeCards');
+  const total = STATIC_INCOME.reduce((s, i) => s + i.amount, 0);
+  document.getElementById('statNet').textContent = fmt(total - MONTHLY_EXPENSES.reduce((s, e) => s + e.amount, 0));
+
+  container.innerHTML = STATIC_INCOME.map(i => `
+    <div class="income-card">
+      <div class="income-label">${i.label}</div>
+      <div class="income-source">${i.source}</div>
+      <div class="income-amount">${fmt(i.amount)}</div>
+      <div class="income-type">${i.type}</div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════
+// CHARTS
+// ════════════════════════════════════════════════
+let spendChart, incChart, sumChart;
+
+function renderCharts() {
+  const monthlyTotal = MONTHLY_EXPENSES.reduce((s, e) => s + e.amount, 0);
+  const incomeTotal = STATIC_INCOME.reduce((s, i) => s + i.amount, 0);
+
+  // Spending breakdown (donut)
+  const cats = {};
+  MONTHLY_EXPENSES.forEach(e => { cats[e.type] = (cats[e.type] || 0) + e.amount; });
+  const catLabels = Object.keys(cats);
+  const catValues = Object.values(cats);
+  const COLORS = ['#a07830','#c9a84c','#d4b86a','#b8984a','#8a6525','#e8d4a0','#6b4f1f','#f0e8c8'];
+
+  const ctx1 = document.getElementById('spendingChart').getContext('2d');
+  if (spendChart) spendChart.destroy();
+  spendChart = new Chart(ctx1, {
+    type: 'doughnut',
+    data: { labels: catLabels, datasets: [{ data: catValues, backgroundColor: COLORS, borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { family: 'DM Sans', size: 11 }, color: '#1a1510', padding: 12 } } } }
+  });
+
+  // Income vs expenses (bar)
+  const ctx2 = document.getElementById('incomeChart').getContext('2d');
+  if (incChart) incChart.destroy();
+  incChart = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: ['Monthly'],
+      datasets: [
+        { label: 'Income', data: [incomeTotal], backgroundColor: 'rgba(22,163,74,0.7)', borderRadius: 6 },
+        { label: 'Expenses', data: [monthlyTotal], backgroundColor: 'rgba(220,38,38,0.6)', borderRadius: 6 },
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 }, color: '#1a1510' } }, x: { grid: { display: false }, ticks: { color: '#1a1510' } } }, plugins: { legend: { labels: { font: { family: 'DM Sans', size: 11 }, color: '#1a1510' } } } }
+  });
+
+  // Summary chart (income view)
+  const ctx3 = document.getElementById('summaryChart').getContext('2d');
+  if (sumChart) sumChart.destroy();
+  sumChart = new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels: ['Income', 'Expenses', 'Net Savings'],
+      datasets: [{
+        data: [incomeTotal, monthlyTotal, incomeTotal - monthlyTotal],
+        backgroundColor: ['rgba(22,163,74,0.7)', 'rgba(220,38,38,0.6)', 'rgba(201,168,76,0.7)'],
+        borderRadius: 8,
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 }, color: '#1a1510', callback: v => '$' + v.toLocaleString() } }, x: { grid: { display: false }, ticks: { color: '#1a1510', font: { size: 12 } } } } }
+  });
 }
 </script>
 </body>
