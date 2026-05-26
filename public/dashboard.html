@@ -957,9 +957,9 @@ async function loadBudget() {
       cards: [
         { name: 'Apple Card', balance: 86.85, dueDate: '5/30/2026', nextStatement: 77.37, thisMonth: 77.37, remainder: 9.48, useCase: 'Chargepoint (3%) + random (tap 2%), iPhone, Apple Watch' },
         { name: 'Bank of America', balance: 124.36, dueDate: '6/5/2026', nextStatement: 124.36, thisMonth: 0, remainder: 0, useCase: '3% online shopping, Tesla Sub' },
-        { name: 'AMEX Platinum', balance: 5611.80, dueDate: '6/10/2026', nextStatement: 3879.84, thisMonth: 0, remainder: 1731.96, useCase: 'Airfare, hotels, rentals, HULU, Walmart, Peacock' },
-        { name: 'AMEX Gold', balance: 505.34, dueDate: '6/17/2026', nextStatement: 505.34, thisMonth: 0, remainder: 0, useCase: 'Eating out (4%), carwash, Dunkin' },
-        { name: 'AMEX Blue', balance: 914.95, dueDate: '6/1/2026', nextStatement: 387.60, thisMonth: 0, remainder: 527.35, useCase: 'Grocery (6%) & gas (4%)' },
+        { name: 'AMEX Platinum (···1006)', balance: 5611.80, dueDate: '6/10/2026', nextStatement: 3879.84, thisMonth: 0, remainder: 1731.96, useCase: 'Airfare, hotels, rentals, HULU, Walmart, Peacock' },
+        { name: 'AMEX Gold (···1005)', balance: 505.34, dueDate: '6/17/2026', nextStatement: 505.34, thisMonth: 0, remainder: 0, useCase: 'Eating out (4%), carwash, Dunkin' },
+        { name: 'AMEX Blue (···1008)', balance: 914.95, dueDate: '6/1/2026', nextStatement: 387.60, thisMonth: 0, remainder: 527.35, useCase: 'Grocery (6%) & gas (4%)' },
         { name: 'RobinHood', balance: 5666.83, dueDate: '6/17/2026', nextStatement: 5666.83, thisMonth: 0, remainder: 0, useCase: 'Random (3% back all), Tesla Insurance, Ringy, etc.' },
         { name: 'Amazon', balance: 745.53, dueDate: '6/10/2026', nextStatement: 724.96, thisMonth: 0, remainder: 20.57, useCase: 'All Amazon (5% cashback)' },
         { name: 'Venmo', balance: 58.62, dueDate: '6/7/2026', nextStatement: 58.62, thisMonth: 0, remainder: 0, useCase: '1-3% on highest categories' },
@@ -970,24 +970,20 @@ async function loadBudget() {
 }
  async function loadPlaidData() {
     try {
-        // 1. Fetch Balances
         const balRes = await fetch('/api/plaid/balances');
         const balData = await balRes.json();
         
         if (balData.accounts && balData.accounts.length > 0) {
+            // CALL THE MERGE FUNCTION HERE
+            mergePlaidData(balData.accounts);
             renderPlaidAccounts(balData.accounts);
-            console.log('Real Plaid Accounts:', balData.accounts);
         }
 
-        // 2. Fetch Transactions
         const txnRes = await fetch('/api/plaid/transactions');
         const txnData = await txnRes.json();
-
         if (txnData.transactions && txnData.transactions.length > 0) {
             renderTransactions(txnData.transactions);
-            console.log('Real Plaid Transactions:', txnData.transactions);
         }
-
     } catch (error) {
         console.error('Error fetching real data:', error);
         showToast('⚠ Error loading live bank data');
@@ -1478,6 +1474,24 @@ async function refreshData() {
   await loadPlaidData();
   btn.classList.remove('spinning');
   showToast('✓ Data refreshed');
+  // Add this helper function
+function mergePlaidData(plaidAccounts) {
+  if (!budgetData || !budgetData.cards) return;
+
+  plaidAccounts.forEach(account => {
+    // Find the matching local card entry using the last 4 digits (mask)
+    const match = budgetData.cards.find(c => 
+      account.mask && c.name.includes(account.mask)
+    );
+
+    if (match) {
+      match.balance = account.balance;
+    }
+  });
+
+  // Re-render the cards grid with the updated values
+  renderCards();
+}
 }
 
 // ═══════════════════════════════════════════════
