@@ -970,17 +970,18 @@ async function loadBudget() {
 }
   async function loadPlaidData() {
  async function loadPlaidData() {
-  try {
-    const [balRes, txnRes] = await Promise.all([
-      fetch('/api/plaid/balances'),
-      fetch('/api/plaid/transactions'),
-    ]);
-    const { accounts } = await balRes.json();
-    const { transactions } = await txnRes.json();
+    try {
+        const response = await fetch('/api/plaid/balances');
+        const data = await response.json();
 
-    if (accounts && accounts.length > 0) renderPlaidAccounts(accounts);
-    if (transactions && transactions.length > 0) renderTransactions(transactions);
-  } catch(e) { console.warn('Plaid data unavailable'); }
+        if (data.accounts && data.accounts.length > 0) {
+            // Logic to update your UI with data.accounts
+            console.log('Real Plaid Accounts:', data.accounts);
+            // Example: updateDashboardUI(data.accounts);
+        }
+    } catch (error) {
+        console.error('Error fetching real balances:', error);
+    }
 }
 }
 
