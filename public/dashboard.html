@@ -1387,7 +1387,7 @@ function renderTransactions(transactions) {
 // ═══════════════════════════════════════════════
 //  PLAID CONNECT
 // ═══════════════════════════════════════════════
-async function connectPlaid()
+async function connectPlaid() {
   try {
     const res = await fetch('/api/plaid/create-link-token', { method: 'POST' });
     const { link_token } = await res.json();
