@@ -968,8 +968,6 @@ async function loadBudget() {
     renderAll();
   } catch(e) { console.error('Budget load failed', e); }
 }
-
-async function loadPlaidData() {
  async function loadPlaidData() {
   try {
     const [balRes, txnRes] = await Promise.all([
