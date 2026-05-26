@@ -970,8 +970,7 @@ async function loadBudget() {
 }
 
 async function loadPlaidData() {
-  // Plaid requires the Node.js server — connect via the full app
-  return;
+ async function loadPlaidData() {
   try {
     const [balRes, txnRes] = await Promise.all([
       fetch('/api/plaid/balances'),
@@ -983,6 +982,7 @@ async function loadPlaidData() {
     if (accounts && accounts.length > 0) renderPlaidAccounts(accounts);
     if (transactions && transactions.length > 0) renderTransactions(transactions);
   } catch(e) { console.warn('Plaid data unavailable'); }
+}
 }
 
 // ═══════════════════════════════════════════════
