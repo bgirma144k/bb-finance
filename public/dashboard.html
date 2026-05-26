@@ -612,7 +612,7 @@
       <div class="user-name" id="userName">Loading…</div>
       <div class="user-email" id="userEmail"></div>
     </div>
-    <button class="logout-btn" onclick="showToast('Signed in as Brad & Beza')" title="Sign out">
+    <button class="logout-btn" onclick="window.location.href='/auth/logout'" title="Sign out">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
       </svg>
@@ -1386,9 +1386,7 @@ function renderTransactions(transactions) {
 // ═══════════════════════════════════════════════
 //  PLAID CONNECT
 // ═══════════════════════════════════════════════
-async function connectPlaid() {
-  showToast('⚠ Bank connection requires the full server app');
-  return;
+async function connectPlaid()
   try {
     const res = await fetch('/api/plaid/create-link-token', { method: 'POST' });
     const { link_token } = await res.json();
