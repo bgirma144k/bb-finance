@@ -971,16 +971,27 @@ async function loadBudget() {
   async function loadPlaidData() {
  async function loadPlaidData() {
     try {
-        const response = await fetch('/api/plaid/balances');
-        const data = await response.json();
-
-        if (data.accounts && data.accounts.length > 0) {
-            // Logic to update your UI with data.accounts
-            console.log('Real Plaid Accounts:', data.accounts);
-            // Example: updateDashboardUI(data.accounts);
+        // 1. Fetch Balances
+        const balRes = await fetch('/api/plaid/balances');
+        const balData = await balRes.json();
+        
+        if (balData.accounts && balData.accounts.length > 0) {
+            renderPlaidAccounts(balData.accounts);
+            console.log('Real Plaid Accounts:', balData.accounts);
         }
+
+        // 2. Fetch Transactions
+        const txnRes = await fetch('/api/plaid/transactions');
+        const txnData = await txnRes.json();
+
+        if (txnData.transactions && txnData.transactions.length > 0) {
+            renderTransactions(txnData.transactions);
+            console.log('Real Plaid Transactions:', txnData.transactions);
+        }
+
     } catch (error) {
-        console.error('Error fetching real balances:', error);
+        console.error('Error fetching real data:', error);
+        showToast('⚠ Error loading live bank data');
     }
 }
 }
