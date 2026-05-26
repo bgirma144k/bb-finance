@@ -964,17 +964,67 @@ const STATIC_BUDGET = {
     { source: 'Brad — GM',         amount: 8000,   type: 'Bank (BoA)', person: 'brad', static: true },
     { source: 'Beza — Insurance',  amount: 2833.59, type: 'Bank (BoA)', person: 'beza', static: true },
   ],
-  // Card definitions — plaidMask is the last-4 of the Plaid account to match
-  // Leave plaidMask: null for cards not expected to be in Plaid
+  // Card definitions.
+  // plaidMask     — exact last-4 from Plaid (highest priority match)
+  // plaidKeywords — lowercase substrings to match against Plaid account name (any one match wins)
+  // Both are optional; if neither matches, card shows as "Not Connected"
   cards: [
-    { name: 'Apple Card',              balance: null, dueDate: '5/30/2026', nextStatement: null,  useCase: 'Chargepoint (3%) + random (tap 2%), iPhone, Apple Watch',        plaidMask: null },
-    { name: 'Bank of America',         balance: null, dueDate: '6/5/2026',  nextStatement: null,  useCase: '3% online shopping, Tesla Sub',                                  plaidMask: null },
-    { name: 'AMEX Platinum (···1006)', balance: null, dueDate: '6/10/2026', nextStatement: null,  useCase: 'Airfare, hotels, rentals, HULU, Walmart, Peacock',               plaidMask: '1006' },
-    { name: 'AMEX Gold (···1005)',      balance: null, dueDate: '6/17/2026', nextStatement: null,  useCase: 'Eating out (4%), carwash, Dunkin',                               plaidMask: '1005' },
-    { name: 'AMEX Blue (···1008)',      balance: null, dueDate: '6/1/2026',  nextStatement: null,  useCase: 'Grocery (6%) & gas (4%)',                                        plaidMask: '1008' },
-    { name: 'RobinHood',               balance: null, dueDate: '6/17/2026', nextStatement: null,  useCase: 'Random (3% back all), Tesla Insurance, Ringy, etc.',             plaidMask: null },
-    { name: 'Amazon',                  balance: null, dueDate: '6/10/2026', nextStatement: null,  useCase: 'All Amazon (5% cashback)',                                       plaidMask: null },
-    { name: 'Venmo',                   balance: null, dueDate: '6/7/2026',  nextStatement: null,  useCase: '1-3% on highest categories',                                     plaidMask: null },
+    {
+      name: 'Apple Card',
+      balance: null, dueDate: '5/30/2026', nextStatement: null,
+      useCase: 'Chargepoint (3%) + random (tap 2%), iPhone, Apple Watch',
+      plaidMask: null,
+      plaidKeywords: ['apple card', 'apple credit', 'apple bank']
+    },
+    {
+      name: 'Bank of America CC',
+      balance: null, dueDate: '6/5/2026', nextStatement: null,
+      useCase: '3% online shopping, Tesla Sub',
+      plaidMask: null,
+      plaidKeywords: ['bank of america credit', 'bofa credit', 'boa credit', 'bankamericard']
+    },
+    {
+      name: 'AMEX Platinum (···1006)',
+      balance: null, dueDate: '6/10/2026', nextStatement: null,
+      useCase: 'Airfare, hotels, rentals, HULU, Walmart, Peacock',
+      plaidMask: '1006',
+      plaidKeywords: ['american express platinum', 'amex platinum', 'platinum card']
+    },
+    {
+      name: 'AMEX Gold (···1005)',
+      balance: null, dueDate: '6/17/2026', nextStatement: null,
+      useCase: 'Eating out (4%), carwash, Dunkin',
+      plaidMask: '1005',
+      plaidKeywords: ['american express gold', 'amex gold', 'gold card']
+    },
+    {
+      name: 'AMEX Blue (···1008)',
+      balance: null, dueDate: '6/1/2026', nextStatement: null,
+      useCase: 'Grocery (6%) & gas (4%)',
+      plaidMask: '1008',
+      plaidKeywords: ['american express blue', 'amex blue', 'blue cash', 'blue from amex']
+    },
+    {
+      name: 'RobinHood',
+      balance: null, dueDate: '6/17/2026', nextStatement: null,
+      useCase: 'Random (3% back all), Tesla Insurance, Ringy, etc.',
+      plaidMask: null,
+      plaidKeywords: ['robinhood', 'robin hood']
+    },
+    {
+      name: 'Amazon',
+      balance: null, dueDate: '6/10/2026', nextStatement: null,
+      useCase: 'All Amazon (5% cashback)',
+      plaidMask: null,
+      plaidKeywords: ['amazon', 'amazon prime rewards', 'amazon visa', 'amazon store']
+    },
+    {
+      name: 'Venmo',
+      balance: null, dueDate: '6/7/2026', nextStatement: null,
+      useCase: '1-3% on highest categories',
+      plaidMask: null,
+      plaidKeywords: ['venmo', 'venmo credit', 'venmo visa']
+    },
   ]
 };
 
@@ -1065,39 +1115,46 @@ async function loadPlaidData() {
 
 // ═══════════════════════════════════════════════
 //  CARD BALANCE MERGE
-//  Only set a balance if the account exists in Plaid.
-//  If no Plaid account matches the card, balance stays null.
+//  Priority: 1) exact mask match  2) keyword match against Plaid account name
+//  If neither hits, card.plaidConnected stays false → shows as "Not Connected"
 // ═══════════════════════════════════════════════
 function mergePlaidCardBalances() {
+  // Only look at credit/loan accounts, not checking/savings
+  const creditAccounts = plaidAccounts.filter(a => {
+    const t = (a.type || '').toLowerCase();
+    const s = (a.subtype || '').toLowerCase();
+    return t === 'credit' || s === 'credit card' || t === 'loan';
+  });
+
   budgetData.cards.forEach(card => {
-    // Reset to null first — Plaid is the source of truth
     card.plaidConnected = false;
     card.balance        = null;
     card.nextStatement  = null;
 
-    if (!plaidAccounts.length) return;
+    if (!creditAccounts.length) return;
 
-    // Match by last-4 (mask) if the card specifies one
+    let match = null;
+
+    // 1) Exact mask match (most reliable)
     if (card.plaidMask) {
-      const match = plaidAccounts.find(a => a.mask === card.plaidMask);
-      if (match) {
-        card.balance       = match.balance;
-        card.nextStatement = match.balance; // Plaid doesn't give "next statement" — use balance as proxy
-        card.plaidConnected = true;
-        return;
-      }
+      match = creditAccounts.find(a => String(a.mask) === String(card.plaidMask));
     }
 
-    // Fuzzy match by name keywords (strip parenthetical mask from display name)
-    const plainName = card.name.replace(/\s*\(.*?\)/g, '').toLowerCase().trim();
-    const match = plaidAccounts.find(a => {
-      const an = (a.name || '').toLowerCase();
-      return an.includes(plainName) || plainName.includes(an.split(' ')[0]);
-    });
+    // 2) Keyword match against Plaid account name
+    if (!match && card.plaidKeywords && card.plaidKeywords.length) {
+      match = creditAccounts.find(a => {
+        const an = (a.name || a.official_name || '').toLowerCase();
+        return card.plaidKeywords.some(kw => an.includes(kw));
+      });
+    }
+
     if (match) {
-      card.balance        = match.balance;
-      card.nextStatement  = match.balance;
+      // Plaid returns current_balance; for credit cards available = credit_limit - current
+      card.balance        = match.balance ?? match.current_balance ?? null;
+      card.nextStatement  = card.balance; // best proxy; Plaid doesn't expose next_statement_balance
+      card.limit          = match.limit   ?? match.credit_limit ?? null;
       card.plaidConnected = true;
+      card.plaidAccountId = match.account_id || match.id;
     }
   });
 }
